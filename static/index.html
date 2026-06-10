@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Bug Priority Predictor</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Style -->
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-container">
+                    <span class="logo-icon"><i class="fa-solid fa-bug-slash"></i></span>
+                    <div class="logo-text">
+                        <h2>SmartBug</h2>
+                        <span>Priority Predictor</span>
+                    </div>
+                </div>
+            </div>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li class="active" data-target="dashboard-tab">
+                        <a href="#"><i class="fa-solid fa-chart-pie"></i><span>Dashboard</span></a>
+                    </li>
+                    <li data-target="single-predict-tab">
+                        <a href="#"><i class="fa-solid fa-wand-magic-sparkles"></i><span>Single Prediction</span></a>
+                    </li>
+                    <li data-target="batch-predict-tab">
+                        <a href="#"><i class="fa-solid fa-list-check"></i><span>Batch Predictions</span></a>
+                    </li>
+                    <li data-target="model-metrics-tab">
+                        <a href="#"><i class="fa-solid fa-gauge-high"></i><span>Model Metrics</span></a>
+                    </li>
+                    <li data-target="alerts-tab">
+                        <a href="#"><i class="fa-solid fa-bell"></i><span>Alerts</span><span class="badge badge-alert" id="alerts-sidebar-badge" style="display: none;">0</span></a>
+                    </li>
+                </ul>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="system-status">
+                    <span class="status-indicator status-green" id="footer-status-indicator"></span>
+                    <span class="status-label" id="footer-status-label">System Online</span>
+                </div>
+                <div class="app-version">v1.0.0</div>
+            </div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <main class="main-content">
+            <!-- Header bar -->
+            <header class="content-header">
+                <div class="header-title-container">
+                    <h1 id="page-title">System Overview</h1>
+                    <p id="page-subtitle">Real-time status and operational insights</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-secondary btn-icon" id="btn-refresh-data" title="Refresh Data">
+                        <i class="fa-solid fa-arrows-rotate"></i>
+                    </button>
+                    <div class="user-badge">
+                        <div class="avatar"><i class="fa-solid fa-user-gear"></i></div>
+                        <span>ML Engineer</span>
+                    </div>
+                </div>
+            </header>
+
+            <div class="content-body">
+                <!-- ========================================== -->
+                <!-- DASHBOARD TAB -->
+                <!-- ========================================== -->
+                <div class="tab-pane active" id="dashboard-tab">
+                    <!-- Status and Stats Overview -->
+                    <div class="stats-grid">
+                        <div class="card stat-card">
+                            <div class="stat-icon icon-blue"><i class="fa-solid fa-server"></i></div>
+                            <div class="stat-content">
+                                <h3>Model Status</h3>
+                                <div class="stat-value" id="dash-model-status">Loading...</div>
+                                <p class="stat-desc" id="dash-model-details">Checking API health</p>
+                            </div>
+                        </div>
+                        <div class="card stat-card">
+                            <div class="stat-icon icon-green"><i class="fa-solid fa-calculator"></i></div>
+                            <div class="stat-content">
+                                <h3>Total Predictions</h3>
+                                <div class="stat-value" id="dash-total-predictions">0</div>
+                                <p class="stat-desc">Cumulative predictions made</p>
+                            </div>
+                        </div>
+                        <div class="card stat-card">
+                            <div class="stat-icon icon-purple"><i class="fa-solid fa-shield-halved"></i></div>
+                            <div class="stat-content">
+                                <h3>Avg. Confidence</h3>
+                                <div class="stat-value" id="dash-avg-confidence">0.0%</div>
+                                <p class="stat-desc">Confidence level score</p>
+                            </div>
+                        </div>
+                        <div class="card stat-card">
+                            <div class="stat-icon icon-orange"><i class="fa-solid fa-gauge-simple-high"></i></div>
+                            <div class="stat-content">
+                                <h3>System Latency</h3>
+                                <div class="stat-value" id="dash-avg-latency">0ms</div>
+                                <p class="stat-desc">Avg. prediction delay</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts Grid -->
+                    <div class="grid-2-1">
+                        <div class="card chart-card">
+                            <div class="card-header">
+                                <h2>Prediction Confidence Over Time</h2>
+                                <span class="card-subtitle">Last 10 predictions</span>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="chart-confidence-time"></canvas>
+                            </div>
+                        </div>
+                        <div class="card chart-card">
+                            <div class="card-header">
+                                <h2>Priority Distribution</h2>
+                                <span class="card-subtitle">Predicted bug severities</span>
+                            </div>
+                            <div class="chart-container pie-container">
+                                <canvas id="chart-priority-dist"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Activity -->
+                    <div class="card table-card">
+                        <div class="card-header">
+                            <h2>Recent Predictions Log</h2>
+                            <span class="card-subtitle">History of latest analyzed bug reports</span>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="data-table" id="recent-predictions-table">
+                                <thead>
+                                    <tr>
+                                        <th>Bug ID</th>
+                                        <th>Title</th>
+                                        <th>Component</th>
+                                        <th>Severity</th>
+                                        <th>Predicted Priority</th>
+                                        <th>Confidence</th>
+                                        <th>Timestamp</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="placeholder-row">
+                                        <td colspan="7">No prediction records available. Go to <strong>Single Prediction</strong> to start.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========================================== -->
+                <!-- SINGLE PREDICTION TAB -->
+                <!-- ========================================== -->
+                <div class="tab-pane" id="single-predict-tab">
+                    <div class="grid-split">
+                        <!-- Left Pane: Input Form -->
+                        <div class="card form-card">
+                            <div class="card-header">
+                                <h2>Bug Details Form</h2>
+                                <span class="card-subtitle">Enter bug metadata for priority classification</span>
+                            </div>
+                            <form id="single-predict-form" class="form-grid">
+                                <div class="form-group full-width">
+                                    <label for="title">Bug Title <span class="required">*</span></label>
+                                    <input type="text" id="title" required minlength="5" maxlength="500" placeholder="e.g., Database connection timeout under peak load">
+                                    <span class="field-hint">Brief title summarizing the issue (min 5 chars)</span>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="component">Component / Module <span class="required">*</span></label>
+                                    <select id="component" required>
+                                        <option value="" disabled selected>Select component...</option>
+                                        <option value="authentication">Authentication & Login</option>
+                                        <option value="database">Database & Persistence</option>
+                                        <option value="UI">UI / Front-end Display</option>
+                                        <option value="payment">Payment & Billing</option>
+                                        <option value="search">Search & Catalog</option>
+                                        <option value="notifications">Notifications Service</option>
+                                        <option value="analytics">Analytics & BI</option>
+                                        <option value="cart">Cart & Checkout</option>
+                                        <option value="settings">Account Settings</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="severity">Severity Level <span class="required">*</span></label>
+                                    <select id="severity" required>
+                                        <option value="low">Low - Minor aesthetic issue</option>
+                                        <option value="medium" selected>Medium - Degraded functionality</option>
+                                        <option value="high">High - Severe operational impact</option>
+                                        <option value="critical">Critical - System down, blocking users</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="affected_users">Affected Users <span class="required">*</span></label>
+                                    <input type="number" id="affected_users" required min="1" max="1000000" value="1">
+                                    <span class="field-hint">Number of users impacted by this bug</span>
+                                </div>
+
+                                <div class="form-group checkbox-group">
+                                    <label class="checkbox-container">
+                                        <input type="checkbox" id="is_reproducible" checked>
+                                        <span class="checkmark"></span>
+                                        Bug is consistently reproducible
+                                    </label>
+                                </div>
+
+                                <div class="form-group full-width">
+                                    <label for="description">Detailed Description <span class="required">*</span></label>
+                                    <textarea id="description" required minlength="10" maxlength="5000" rows="6" placeholder="Provide steps to reproduce, actual vs expected behavior, error logs, etc."></textarea>
+                                    <span class="field-hint">Details help the model understand bug semantics (min 10 chars)</span>
+                                </div>
+
+                                <div class="form-group full-width">
+                                    <label for="reported_by">Reporter Email (Optional)</label>
+                                    <input type="email" id="reported_by" placeholder="e.g., developer@company.com">
+                                </div>
+
+                                <div class="form-group full-width">
+                                    <label>Bug Screenshot (Optional)</label>
+                                    <div class="drag-drop-area" id="image-drag-area">
+                                        <input type="file" id="image-upload" accept="image/*" class="file-input-hidden">
+                                        <i class="fa-solid fa-cloud-arrow-up drag-icon"></i>
+                                        <p class="drag-text">Drag and drop screenshot here, or <span>browse files</span></p>
+                                        <div class="upload-preview" id="image-preview-container" style="display: none;">
+                                            <img id="image-preview" src="#" alt="Screenshot preview">
+                                            <button type="button" class="btn-remove-file" id="btn-remove-img"><i class="fa-solid fa-xmark"></i></button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="form-actions full-width">
+                                    <button type="submit" class="btn btn-primary btn-submit" id="btn-predict-single">
+                                        <span class="btn-text">🔮 Predict Priority</span>
+                                        <span class="spinner" style="display: none;"><i class="fa-solid fa-circle-notch fa-spin"></i></span>
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Right Pane: Predictions & Insights -->
+                        <div class="card result-card inactive" id="prediction-result-card">
+                            <div class="card-header">
+                                <h2>Prediction Analysis</h2>
+                                <span class="card-subtitle">Real-time classification result & insights</span>
+                            </div>
+                            <div class="result-placeholder">
+                                <i class="fa-solid fa-brain placeholder-brain"></i>
+                                <h3>Awaiting Analysis</h3>
+                                <p>Fill in the form and click "Predict Priority" to generate ML prediction results.</p>
+                            </div>
+                            <div class="result-content" style="display: none;">
+                                <div class="result-summary">
+                                    <div class="priority-display-block" id="result-priority-block">
+                                        <span class="label">Priority</span>
+                                        <h1 id="result-priority-val">High</h1>
+                                    </div>
+                                    <div class="gauge-display-block">
+                                        <div class="progress-ring-container">
+                                            <svg class="progress-ring" width="100" height="100">
+                                                <circle class="progress-ring__circle-bg" stroke="rgba(255,255,255,0.05)" stroke-width="8" fill="transparent" r="40" cx="50" cy="50"/>
+                                                <circle class="progress-ring__circle" id="result-confidence-ring" stroke="#f97316" stroke-width="8" fill="transparent" r="40" cx="50" cy="50"/>
+                                            </svg>
+                                            <div class="progress-ring-value" id="result-confidence-val">89%</div>
+                                        </div>
+                                        <span class="label">Confidence Score</span>
+                                    </div>
+                                </div>
+
+                                <div class="result-detail-box info-box">
+                                    <div class="detail-icon"><i class="fa-solid fa-circle-info"></i></div>
+                                    <div class="detail-text">
+                                        <h4>Recommendation</h4>
+                                        <p id="result-recommendation-val">Prioritize in sprint planning.</p>
+                                    </div>
+                                </div>
+
+                                <div class="result-detail-box idea-box">
+                                    <div class="detail-icon"><i class="fa-solid fa-lightbulb"></i></div>
+                                    <div class="detail-text">
+                                        <h4>Model Reasoning</h4>
+                                        <p id="result-reasoning-val">Analyzing components...</p>
+                                    </div>
+                                </div>
+
+                                <div class="chart-sub-container">
+                                    <h3>Class Probabilities Breakdown</h3>
+                                    <div class="probability-bars" id="result-probabilities-container">
+                                        <!-- Will be dynamically populated with bars -->
+                                    </div>
+                                </div>
+
+                                <div class="screenshot-attached-box" id="result-screenshot-attached" style="display: none;">
+                                    <h3>Uploaded Bug Screenshot</h3>
+                                    <div class="result-screenshot-wrapper">
+                                        <img id="result-screenshot-img" src="#" alt="Uploaded bug screenshot">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========================================== -->
+                <!-- BATCH PREDICTIONS TAB -->
+                <!-- ========================================== -->
+                <div class="tab-pane" id="batch-predict-tab">
+                    <div class="grid-2-cols">
+                        <!-- Upload Box -->
+                        <div class="card csv-upload-card">
+                            <div class="card-header">
+                                <h2>CSV File Uploader</h2>
+                                <span class="card-subtitle">Upload a batch CSV file for fast analysis</span>
+                            </div>
+                            <div class="csv-drop-area" id="csv-drag-area">
+                                <input type="file" id="csv-upload" accept=".csv" class="file-input-hidden">
+                                <i class="fa-solid fa-file-csv csv-icon"></i>
+                                <h3>Drag & drop CSV file here</h3>
+                                <p>File must contain columns: <code>title</code>, <code>description</code>, <code>component</code>, <code>severity</code>, <code>affected_users</code>, <code>is_reproducible</code></p>
+                                <button type="button" class="btn btn-secondary btn-upload-browse" id="btn-browse-csv">Browse Files</button>
+                                <div class="csv-file-info" id="csv-file-info" style="display: none;">
+                                    <i class="fa-solid fa-file-lines"></i>
+                                    <span id="csv-file-name">bugs.csv</span>
+                                    <span id="csv-file-size">(12.4 KB)</span>
+                                    <button type="button" class="btn-remove-file" id="btn-remove-csv"><i class="fa-solid fa-xmark"></i></button>
+                                </div>
+                            </div>
+                            <div class="csv-actions" style="display: none;" id="csv-actions-panel">
+                                <button class="btn btn-primary btn-submit full-width" id="btn-process-batch">
+                                    <span class="btn-text">🚀 Process Batch (0 rows)</span>
+                                    <span class="spinner" style="display: none;"><i class="fa-solid fa-circle-notch fa-spin"></i></span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Template/Guide Box -->
+                        <div class="card guide-card">
+                            <div class="card-header">
+                                <h2>CSV Schema Requirements</h2>
+                                <span class="card-subtitle">Ensure headers match the format below</span>
+                            </div>
+                            <div class="guide-content">
+                                <p>Please structure your CSV file with the following headers:</p>
+                                <div class="code-preview">
+                                    <code>title,description,component,severity,affected_users,is_reproducible</code><br>
+                                    <code>"Checkout fails","Error 500 when tapping buy","payment","critical",420,true</code><br>
+                                    <code>"Button cut off","Login button visual bug","UI","low",15,false</code>
+                                </div>
+                                <div class="alert-box alert-info">
+                                    <i class="fa-solid fa-circle-exclamation"></i>
+                                    <span><strong>Max Limit:</strong> Up to 1,000 bug reports can be processed concurrently per batch.</span>
+                                </div>
+                                <button class="btn btn-secondary btn-icon-text" id="btn-download-template">
+                                    <i class="fa-solid fa-download"></i><span>Download Sample CSV Template</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Batch Progress & Summary (hidden initially) -->
+                    <div id="batch-results-summary-section" style="display: none;">
+                        <div class="stats-grid margin-top">
+                            <div class="card stat-card">
+                                <div class="stat-icon icon-blue"><i class="fa-solid fa-file-invoice"></i></div>
+                                <div class="stat-content">
+                                    <h3>Total Bugs</h3>
+                                    <div class="stat-value" id="batch-summary-total">0</div>
+                                    <p class="stat-desc">Parsed from uploaded CSV</p>
+                                </div>
+                            </div>
+                            <div class="card stat-card">
+                                <div class="stat-icon icon-green"><i class="fa-solid fa-circle-check"></i></div>
+                                <div class="stat-content">
+                                    <h3>Processed</h3>
+                                    <div class="stat-value" id="batch-summary-processed">0</div>
+                                    <p class="stat-desc">Successful classifications</p>
+                                </div>
+                            </div>
+                            <div class="card stat-card">
+                                <div class="stat-icon icon-red"><i class="fa-solid fa-circle-xmark"></i></div>
+                                <div class="stat-content">
+                                    <h3>Failed</h3>
+                                    <div class="stat-value" id="batch-summary-failed">0</div>
+                                    <p class="stat-desc">Error rows skipped</p>
+                                </div>
+                            </div>
+                            <div class="card stat-card">
+                                <div class="stat-icon icon-purple"><i class="fa-solid fa-file-arrow-down"></i></div>
+                                <div class="stat-content">
+                                    <h3>Download Results</h3>
+                                    <div class="stat-value"><button class="btn btn-sm btn-green" id="btn-download-results-csv">📥 Download</button></div>
+                                    <p class="stat-desc">Predictions CSV file</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Results Visualization & Details -->
+                        <div class="grid-2-1 margin-top">
+                            <div class="card table-card">
+                                <div class="card-header">
+                                    <h2>Batch Prediction Results</h2>
+                                    <span class="card-subtitle">Individual classification results</span>
+                                </div>
+                                <div class="table-responsive max-height-table">
+                                    <table class="data-table" id="batch-results-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Bug ID</th>
+                                                <th>Title</th>
+                                                <th>Component</th>
+                                                <th>Severity</th>
+                                                <th>Predicted Priority</th>
+                                                <th>Confidence</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <!-- Dynamically populated -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div class="card chart-card">
+                                <div class="card-header">
+                                    <h2>Batch Priority Breakdown</h2>
+                                    <span class="card-subtitle">Doughnut representation</span>
+                                </div>
+                                <div class="chart-container pie-container">
+                                    <canvas id="chart-batch-dist"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========================================== -->
+                <!-- MODEL METRICS TAB -->
+                <!-- ========================================== -->
+                <div class="tab-pane" id="model-metrics-tab">
+                    <div class="stats-grid">
+                        <div class="card stat-card metric-item">
+                            <div class="stat-content">
+                                <h3>Accuracy</h3>
+                                <div class="stat-value text-blue" id="metric-accuracy">0.00</div>
+                                <p class="stat-desc">Percentage correct classifications</p>
+                            </div>
+                        </div>
+                        <div class="card stat-card metric-item">
+                            <div class="stat-content">
+                                <h3>Precision</h3>
+                                <div class="stat-value text-green" id="metric-precision">0.00</div>
+                                <p class="stat-desc">Weighted precision score</p>
+                            </div>
+                        </div>
+                        <div class="card stat-card metric-item">
+                            <div class="stat-content">
+                                <h3>Recall</h3>
+                                <div class="stat-value text-orange" id="metric-recall">0.00</div>
+                                <p class="stat-desc">Weighted recall score</p>
+                            </div>
+                        </div>
+                        <div class="card stat-card metric-item">
+                            <div class="stat-content">
+                                <h3>F1-Score</h3>
+                                <div class="stat-value text-purple" id="metric-f1">0.00</div>
+                                <p class="stat-desc">Weighted harmonic mean</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid-split margin-top">
+                        <!-- Feature Importance -->
+                        <div class="card chart-card">
+                            <div class="card-header">
+                                <h2>Feature Importance Weights</h2>
+                                <span class="card-subtitle">Top features used in prediction decisions</span>
+                            </div>
+                            <div class="chart-container" style="position: relative; height: 350px;">
+                                <canvas id="chart-feature-importance"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Confusion Matrix -->
+                        <div class="card matrix-card">
+                            <div class="card-header">
+                                <h2>Confusion Matrix</h2>
+                                <span class="card-subtitle">Predicted vs Actual priority mappings</span>
+                            </div>
+                            <div class="matrix-grid-container">
+                                <div class="matrix-label-y">Actual Priorities</div>
+                                <div class="matrix-content">
+                                    <div class="matrix-header-x">
+                                        <div>Low</div>
+                                        <div>Medium</div>
+                                        <div>High</div>
+                                        <div>Critical</div>
+                                    </div>
+                                    <div class="matrix-body" id="confusion-matrix-body">
+                                        <!-- Will be dynamically populated with cells -->
+                                    </div>
+                                    <div class="matrix-footer-x">Predicted Priorities</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========================================== -->
+                <!-- ALERTS TAB -->
+                <!-- ========================================== -->
+                <div class="tab-pane" id="alerts-tab">
+                    <div class="grid-split">
+                        <!-- Active Alert Logs -->
+                        <div class="card alert-list-card">
+                            <div class="card-header">
+                                <h2>Active System Alerts</h2>
+                                <span class="card-subtitle">Triggered warnings based on configured limits</span>
+                            </div>
+                            <div class="alerts-list-container" id="alerts-list-wrapper">
+                                <div class="no-alerts-state">
+                                    <i class="fa-solid fa-circle-check"></i>
+                                    <h3>System Fully Operational</h3>
+                                    <p>No active alerts. All performance variables are within normal parameters.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Alert Configuration -->
+                        <div class="card config-card">
+                            <div class="card-header">
+                                <h2>Alert Threshold Settings</h2>
+                                <span class="card-subtitle">Adjust SLA targets and alerts boundaries</span>
+                            </div>
+                            <form id="alert-thresholds-form" class="form-grid">
+                                <div class="form-group full-width">
+                                    <label for="threshold-success-rate">Min Success Rate: <span id="val-threshold-success-rate">95%</span></label>
+                                    <input type="range" id="threshold-success-rate" min="50" max="100" value="95" class="slider-input">
+                                    <span class="field-hint">Triggers alarm if server prediction failure rate rises above target</span>
+                                </div>
+
+                                <div class="form-group full-width">
+                                    <label for="threshold-latency">Max Allowable Latency (ms): <span id="val-threshold-latency">200ms</span></label>
+                                    <input type="range" id="threshold-latency" min="50" max="1000" step="50" value="200" class="slider-input">
+                                    <span class="field-hint">Triggers alarm if average prediction duration goes above limit</span>
+                                </div>
+
+                                <div class="form-group full-width">
+                                    <label for="threshold-confidence">Min Confidence Score: <span id="val-threshold-confidence">60%</span></label>
+                                    <input type="range" id="threshold-confidence" min="30" max="95" value="60" class="slider-input">
+                                    <span class="field-hint">Triggers warning if average model predictions confidence falls too low</span>
+                                </div>
+
+                                <div class="form-actions full-width">
+                                    <button type="submit" class="btn btn-primary" id="btn-save-thresholds">Save Configuration Settings</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Notification Toast -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Script -->
+    <script src="/static/app.js"></script>
+</body>
+</html>

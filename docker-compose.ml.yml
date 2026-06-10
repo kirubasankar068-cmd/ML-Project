@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  db:
+    image: ankane/pgvector:v0.5.1
+    container_name: bug_predictor_db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: bugdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - pgvector_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d bugdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.ml
+    container_name: bug_predictor_api
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/bugdb
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgvector_data:

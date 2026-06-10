@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Node/Vite
+node_modules/
+frontend/dist/
+frontend/node_modules/
+.eslintcache
+
+# Databases & local MLOps outputs
+*.db
+backend/data/*.db
+mlflow.db
+mlflow-artifacts/
+data/predictions/
+data/uploads/
+backend/data/uploads/
+backend/data/predictions/
+
+# Environments & credentials
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.pem
+*.key
+
+# IDEs
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp

@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - HOST=0.0.0.0
+      - MODEL_PATH=backend/app/models/optimized_lightgbm_model.pkl
+      - FEATURE_ENGINEER_PATH=backend/app/models/feature_engineer.pkl
+      - DATABASE_URL=sqlite:///backend/data/prediction_history.db
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - JWT_SECRET=super-secret-jwt-key-for-signing-tokens
+      - RATE_LIMIT_PER_MINUTE=100
+    volumes:
+      - ./backend/data:/workspace/backend/data
+      - ./backend/app/models:/workspace/backend/app/models
+    restart: always
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: always
+
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:latest
+    ports:
+      - "5000:5000"
+    command: mlflow server --host 0.0.0.0 --port 5000 --backend-store-uri sqlite:///mlflow.db --default-artifact-root /mlflow-artifacts
+    volumes:
+      - mlflow_data:/mlflow
+    restart: always
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    depends_on:
+      - backend
+    restart: always
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - prometheus
+    restart: always
+
+volumes:
+  mlflow_data:
