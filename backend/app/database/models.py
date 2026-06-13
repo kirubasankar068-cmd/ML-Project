@@ -36,7 +36,18 @@ class Prediction(Base):
     
     explanation = Column(Text, nullable=True)
     recommendation = Column(Text, nullable=True)
+    
+    # Detailed bulk prediction fields
+    file_id = Column(String, index=True, nullable=True)
+    category = Column(String, nullable=True)
+    root_cause = Column(Text, nullable=True)
+    impact = Column(Text, nullable=True)
+    solution = Column(Text, nullable=True)
+    recommendations_json = Column(Text, nullable=True)
+    prevention_json = Column(Text, nullable=True)
+    
     timestamp = Column(DateTime, default=datetime.datetime.utcnow)
+
 
 
 class UploadedFile(Base):

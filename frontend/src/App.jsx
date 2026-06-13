@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Predictor from './pages/Predictor';
+import BulkPredictor from './pages/BulkPredictor';
 import Analytics from './pages/Analytics';
 import Monitoring from './pages/Monitoring';
 import SettingsPage from './pages/Settings';
@@ -50,6 +51,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/prediction" element={<Predictor />} />
+            <Route path="/bulk-predict" element={<BulkPredictor />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/monitoring" element={<Monitoring />} />
             <Route path="/settings" element={<SettingsPage />} />

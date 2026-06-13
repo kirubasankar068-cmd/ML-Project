@@ -51,14 +51,29 @@ class BugClassifierService:
             probabilities = model.predict_proba(features)[0]
             confidence = float(np.max(probabilities))
             
+            # Map priority based on confidence score
+            pct = confidence * 100
+            if pct >= 90:
+                priority = 'Critical'
+                pred_score = 3.0
+            elif pct >= 80:
+                priority = 'High'
+                pred_score = 2.0
+            elif pct >= 70:
+                priority = 'Medium'
+                pred_score = 1.0
+            else:
+                priority = 'Low'
+                pred_score = 0.0
+
             prob_dict = {
                 self.priority_map[i]: float(prob)
                 for i, prob in enumerate(probabilities)
             }
             
             result = {
-                'priority': self.priority_map[int(prediction)],
-                'priority_score': float(prediction),
+                'priority': priority,
+                'priority_score': pred_score,
                 'confidence': confidence,
                 'probabilities': prob_dict
             }
@@ -131,26 +146,33 @@ class BugClassifierService:
         users = bug_data.get('affected_users', 1)
         
         if severity == 'critical' or users > 500:
+            confidence = 0.93  # range 90-100 -> Critical
             priority = 'Critical'
             score = 3.0
-            probs = {'Low': 0.05, 'Medium': 0.1, 'High': 0.25, 'Critical': 0.6}
         elif severity == 'high' or users > 100:
+            confidence = 0.85  # range 80-90 -> High
             priority = 'High'
             score = 2.0
-            probs = {'Low': 0.1, 'Medium': 0.15, 'High': 0.55, 'Critical': 0.2}
         elif severity == 'medium' or users > 10:
+            confidence = 0.75  # range 70-80 -> Medium
             priority = 'Medium'
             score = 1.0
-            probs = {'Low': 0.2, 'Medium': 0.55, 'High': 0.2, 'Critical': 0.05}
         else:
+            confidence = 0.65  # range 60-70 -> Low
             priority = 'Low'
             score = 0.0
-            probs = {'Low': 0.7, 'Medium': 0.2, 'High': 0.08, 'Critical': 0.02}
+            
+        probs = {'Low': 0.0, 'Medium': 0.0, 'High': 0.0, 'Critical': 0.0}
+        probs[priority] = confidence
+        rem = 1.0 - confidence
+        others = [k for k in probs.keys() if k != priority]
+        for o in others:
+            probs[o] = float(f"{rem / len(others):.4f}")
             
         result = {
             'priority': priority,
             'priority_score': score,
-            'confidence': float(probs[priority]),
+            'confidence': confidence,
             'probabilities': probs
         }
         features_df = self._fallback_manual_features(bug_data)

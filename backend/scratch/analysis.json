@@ -1,0 +1,1239 @@
+{
+  ".env": {
+    "path": ".env",
+    "type": "unknown",
+    "imports": [],
+    "apis_called": []
+  },
+  ".env.example": {
+    "path": ".env.example",
+    "type": "unknown",
+    "imports": [],
+    "apis_called": []
+  },
+  ".gitignore": {
+    "path": ".gitignore",
+    "type": "unknown",
+    "imports": [],
+    "apis_called": []
+  },
+  "docker-compose.ml.yml": {
+    "path": "docker-compose.ml.yml",
+    "type": "yml",
+    "imports": [],
+    "apis_called": []
+  },
+  "docker-compose.yml": {
+    "path": "docker-compose.yml",
+    "type": "yml",
+    "imports": [],
+    "apis_called": []
+  },
+  "Dockerfile.ml": {
+    "path": "Dockerfile.ml",
+    "type": "unknown",
+    "imports": [],
+    "apis_called": []
+  },
+  "main.py": {
+    "path": "main.py",
+    "type": "python",
+    "imports": [
+      "os",
+      "logging",
+      "typing",
+      "datetime",
+      "fastapi",
+      "pydantic",
+      "sqlalchemy",
+      "sqlalchemy.ext.declarative",
+      "sqlalchemy.orm",
+      "ml_pipeline"
+    ],
+    "apis_called": []
+  },
+  "ml_pipeline.py": {
+    "path": "ml_pipeline.py",
+    "type": "python",
+    "imports": [
+      "logging",
+      "typing",
+      "numpy",
+      "pandas",
+      "spacy",
+      "torch",
+      "transformers",
+      "sklearn.preprocessing",
+      "sklearn.compose",
+      "sklearn.preprocessing",
+      "imblearn.over_sampling",
+      "xgboost",
+      "shap"
+    ],
+    "apis_called": []
+  },
+  "package.json": {
+    "path": "package.json",
+    "type": "json",
+    "imports": [],
+    "apis_called": []
+  },
+  "README.md": {
+    "path": "README.md",
+    "type": "md",
+    "imports": [],
+    "apis_called": []
+  },
+  "requirements.txt": {
+    "path": "requirements.txt",
+    "type": "txt",
+    "imports": [],
+    "apis_called": []
+  },
+  "requirements_ml.txt": {
+    "path": "requirements_ml.txt",
+    "type": "txt",
+    "imports": [],
+    "apis_called": []
+  },
+  "start.bat": {
+    "path": "start.bat",
+    "type": "bat",
+    "imports": [],
+    "apis_called": []
+  },
+  "_wmi.py": {
+    "path": "_wmi.py",
+    "type": "python",
+    "imports": [],
+    "apis_called": []
+  },
+  "airflow/dags/retrain_pipeline.py": {
+    "path": "airflow\\dags\\retrain_pipeline.py",
+    "type": "python",
+    "imports": [
+      "datetime",
+      "airflow",
+      "airflow.operators.python",
+      "logging",
+      "pandas",
+      "pandas",
+      "ml_pipeline.training.validate_data",
+      "pandas",
+      "backend.app.services.feature_engineering",
+      "sklearn.model_selection",
+      "pandas",
+      "ml_pipeline.training.train",
+      "pandas",
+      "ml_pipeline.training.evaluate",
+      "mlflow",
+      "mlflow.lightgbm",
+      "pickle"
+    ],
+    "apis_called": []
+  },
+  "api/main.py": {
+    "path": "api\\main.py",
+    "type": "python",
+    "imports": [
+      "time",
+      "uuid",
+      "logging",
+      "datetime",
+      "fastapi",
+      "fastapi.middleware.cors",
+      "prometheus_fastapi_instrumentator",
+      "api.schemas",
+      "api.model_loader",
+      "api.prediction_store",
+      "random"
+    ],
+    "apis_called": []
+  },
+  "api/model_loader.py": {
+    "path": "api\\model_loader.py",
+    "type": "python",
+    "imports": [
+      "os",
+      "joblib",
+      "logging",
+      "typing"
+    ],
+    "apis_called": []
+  },
+  "api/prediction_store.py": {
+    "path": "api\\prediction_store.py",
+    "type": "python",
+    "imports": [
+      "threading",
+      "collections",
+      "typing",
+      "datetime"
+    ],
+    "apis_called": []
+  },
+  "api/schemas.py": {
+    "path": "api\\schemas.py",
+    "type": "python",
+    "imports": [
+      "pydantic",
+      "typing"
+    ],
+    "apis_called": []
+  },
+  "backend/Dockerfile": {
+    "path": "backend\\Dockerfile",
+    "type": "unknown",
+    "imports": [],
+    "apis_called": []
+  },
+  "backend/requirements.txt": {
+    "path": "backend\\requirements.txt",
+    "type": "txt",
+    "imports": [],
+    "apis_called": []
+  },
+  "backend/__init__.py": {
+    "path": "backend\\__init__.py",
+    "type": "python",
+    "imports": [],
+    "apis_called": []
+  },
+  "backend/app/main.py": {
+    "path": "backend\\app\\main.py",
+    "type": "python",
+    "imports": [
+      "platform",
+      "fastapi",
+      "fastapi.middleware.cors",
+      "fastapi.responses",
+      "datetime",
+      "backend.app.config.settings",
+      "backend.app.utils.logger",
+      "backend.app.middleware.rate_limiter",
+      "backend.app.services.model_loader",
+      "backend.app.database.database",
+      "backend.app.api.prediction",
+      "backend.app.api.analytics",
+      "backend.app.api.monitoring",
+      "uvicorn"
+    ],
+    "apis_called": []
+  },
+  "backend/app/__init__.py": {
+    "path": "backend\\app\\__init__.py",
+    "type": "python",
+    "imports": [],
+    "apis_called": []
+  },
+  "backend/app/api/analytics.py": {
+    "path": "backend\\app\\api\\analytics.py",
+    "type": "python",
+    "imports": [
+      "typing",
+      "fastapi",
+      "sqlalchemy.orm",
+      "sqlalchemy",
+      "backend.app.database.database",
+      "backend.app.database.models",
+      "backend.app.schemas.prediction",
+      "backend.app.middleware.auth"
+    ],
+    "apis_called": []
+  },
+  "backend/app/api/monitoring.py": {
+    "path": "backend\\app\\api\\monitoring.py",
+    "type": "python",
+    "imports": [
+      "time",
+      "asyncio",
+      "logging",
+      "fastapi",
+      "sqlalchemy.orm",
+      "sqlalchemy",
+      "backend.app.database.database",
+      "backend.app.services.model_loader",
+      "backend.app.services.model_service",
+      "backend.app.schemas.prediction",
+      "backend.app.middleware.auth",
+      "psutil",
+      "random",
+      "random",
+      "random",
+      "random",
+      "random"
+    ],
+    "apis_called": []
+  },
+  "backend/app/api/prediction.py": {
+    "path": "backend\\app\\api\\prediction.py",
+    "type": "python",
+    "imports": [
+      "os",
+      "shutil",
+      "time",
+      "datetime",
+      "uuid",
+      "typing",
+      "fastapi",
+      "sqlalchemy.orm",
+      "backend.app.database.database",
+      "backend.app.database.models",
+      "backend.app.schemas.prediction",
+      "backend.app.services.bug_classifier",
+      "backend.app.services.gemini_service",
+      "backend.app.services.image_analyzer",
+      "backend.app.services.file_processor",
+      "backend.app.middleware.auth",
+      "backend.app.utils.logger",
+      "backend.app.config.settings",
+      "google.oauth2",
+      "google.auth.transport",
+      "time"
+    ],
+    "apis_called": []
+  },
+  "backend/app/api/routes.py": {
+    "path": "backend\\app\\api\\routes.py",
+    "type": "python",
+    "imports": [
+      "time",
+      "os",
+      "datetime",
+      "typing",
+      "uuid",
+      "fastapi",
+      "backend.app.schemas.prediction",
+      "backend.app.services.model_loader",
+      "backend.app.services.predictor",
+      "backend.app.middleware.auth",
+      "backend.app.utils.db",
+      "backend.app.utils.logger",
+      "fastapi.responses",
+      "pandas",
+      "ml_pipeline.training.train",
+      "backend.app.services.feature_engineering",
+      "mlflow"
+    ],
+    "apis_called": []
+  },
+  "backend/app/api/__init__.py": {
+    "path": "backend\\app\\api\\__init__.py",
+    "type": "python",
+    "imports": [],
+    "apis_called": []
+  },
+  "backend/app/config/settings.py": {
+    "path": "backend\\app\\config\\settings.py",
+    "type": "python",
+    "imports": [
+      "os",
+      "typing",
+      "pydantic",
+      "pydantic_settings",
+      "pydantic"
+    ],
+    "apis_called": []
+  },
+  "backend/app/config/__init__.py": {
+    "path": "backend\\app\\config\\__init__.py",
+    "type": "python",
+    "imports": [],
+    "apis_called": []
+  },
+  "backend/app/database/database.py": {
+    "path": "backend\\app\\database\\database.py",
+    "type": "python",
+    "imports": [
+      "os",
+      "sqlalchemy",
+      "sqlalchemy.ext.declarative",
+      "sqlalchemy.orm",
+      "backend.app.config.settings"
+    ],
+    "apis_called": []
+  },
+  "backend/app/database/models.py": {
+    "path": "backend\\app\\database\\models.py",
+    "type": "python",
+    "imports": [
+      "datetime",
+      "sqlalchemy",
+      "sqlalchemy.orm",
+      "backend.app.database.database"
+    ],
+    "apis_called": []
+  },
+  "backend/app/database/__init__.py": {
+    "path": "backend\\app\\database\\__init__.py",
+    "type": "python",
+    "imports": [],
+    "apis_called": []
+  },
+  "backend/app/middleware/auth.py": {
+    "path": "backend\\app\\middleware\\auth.py",
+    "type": "python",
+    "imports": [
+      "datetime",
+      "typing",
+      "fastapi",
+      "fastapi.security",
+      "jwt",
+      "backend.app.config.settings",
+      "backend.app.utils.logger"
+    ],
+    "apis_called": []
+  },
+  "backend/app/middleware/rate_limiter.py": {
+    "path": "backend\\app\\middleware\\rate_limiter.py",
+    "type": "python",
+    "imports": [
+      "time",
+      "fastapi",
+      "typing",
+      "backend.app.config.settings",
+      "backend.app.utils.logger"
+    ],
+    "apis_called": []
+  },
+  "backend/app/middleware/__init__.py": {
+    "path": "backend\\app\\middleware\\__init__.py",
+    "type": "python",
+    "imports": [],
+    "apis_called": []
+  },
+  "backend/app/models/optimized_lightgbm_model.pkl": {
+    "path": "backend\\app\\models\\optimized_lightgbm_model.pkl",
+    "type": "unknown",
+    "imports": [],
+    "apis_called": []
+  },
+  "backend/app/models/__init__.py": {
+    "path": "backend\\app\\models\\__init__.py",
+    "type": "python",
+    "imports": [],
+    "apis_called": []
+  },
+  "backend/app/schemas/prediction.py": {
+    "path": "backend\\app\\schemas\\prediction.py",
+    "type": "python",
+    "imports": [
+      "pydantic",
+      "typing",
+      "datetime"
+    ],
+    "apis_called": []
+  },
+  "backend/app/schemas/__init__.py": {
+    "path": "backend\\app\\schemas\\__init__.py",
+    "type": "python",
+    "imports": [],
+    "apis_called": []
+  },
+  "backend/app/services/bug_classifier.py": {
+    "path": "backend\\app\\services\\bug_classifier.py",
+    "type": "python",
+    "imports": [
+      "logging",
+      "numpy",
+      "pandas",
+      "typing",
+      "backend.app.services.model_loader",
+      "backend.app.services.feature_engineering",
+      "shap"
+    ],
+    "apis_called": []
+  },
+  "backend/app/services/feature_engineering.py": {
+    "path": "backend\\app\\services\\feature_engineering.py",
+    "type": "python",
+    "imports": [
+      "logging",
+      "pickle",
+      "numpy",
+      "pandas",
+      "typing",
+      "sklearn.preprocessing",
+      "sklearn.feature_extraction.text",
+      "datetime"
+    ],
+    "apis_called": []
+  },
+  "backend/app/services/file_processor.py": {
+    "path": "backend\\app\\services\\file_processor.py",
+    "type": "python",
+    "imports": [
+      "os",
+      "json",
+      "logging",
+      "pandas",
+      "typing"
+    ],
+    "apis_called": []
+  },
+  "backend/app/services/gemini_service.py": {
+    "path": "backend\\app\\services\\gemini_service.py",
+    "type": "python",
+    "imports": [],
+    "apis_called": []
+  },
+  "backend/app/services/image_analyzer.py": {
+    "path": "backend\\app\\services\\image_analyzer.py",
+    "type": "python",
+    "imports": [
+      "os",
+      "logging",
+      "re",
+      "typing",
+      "numpy",
+      "backend.app.services.gemini_service",
+      "PIL",
+      "cv2",
+      "easyocr"
+    ],
+    "apis_called": []
+  },
+  "backend/app/services/model_loader.py": {
+    "path": "backend\\app\\services\\model_loader.py",
+    "type": "python",
+    "imports": [
+      "os",
+      "sys",
+      "pickle",
+      "logging",
+      "typing",
+      "backend.app.config.settings",
+      "backend.app.utils.logger",
+      "backend.app.services.feature_engineering"
+    ],
+    "apis_called": []
+  },
+  "backend/app/services/model_service.py": {
+    "path": "backend\\app\\services\\model_service.py",
+    "type": "python",
+    "imports": [
+      "os",
+      "time",
+      "logging",
+      "typing",
+      "datetime",
+      "backend.app.config.settings",
+      "backend.app.database.database",
+      "backend.app.database.models",
+      "mlflow",
+      "evidently.report",
+      "evidently.metric_preset",
+      "pandas"
+    ],
+    "apis_called": []
+  },
+  "backend/app/services/predictor.py": {
+    "path": "backend\\app\\services\\predictor.py",
+    "type": "python",
+    "imports": [
+      "logging",
+      "numpy",
+      "pandas",
+      "typing",
+      "datetime",
+      "backend.app.services.model_loader",
+      "backend.app.services.feature_engineering",
+      "shap"
+    ],
+    "apis_called": []
+  },
+  "backend/app/services/preprocessing.py": {
+    "path": "backend\\app\\services\\preprocessing.py",
+    "type": "python",
+    "imports": [
+      "re"
+    ],
+    "apis_called": []
+  },
+  "backend/app/services/__init__.py": {
+    "path": "backend\\app\\services\\__init__.py",
+    "type": "python",
+    "imports": [],
+    "apis_called": []
+  },
+  "backend/app/utils/db.py": {
+    "path": "backend\\app\\utils\\db.py",
+    "type": "python",
+    "imports": [
+      "os",
+      "sqlite3",
+      "datetime",
+      "typing",
+      "backend.app.config.settings",
+      "backend.app.utils.logger"
+    ],
+    "apis_called": []
+  },
+  "backend/app/utils/logger.py": {
+    "path": "backend\\app\\utils\\logger.py",
+    "type": "python",
+    "imports": [
+      "logging",
+      "sys"
+    ],
+    "apis_called": []
+  },
+  "backend/app/utils/__init__.py": {
+    "path": "backend\\app\\utils\\__init__.py",
+    "type": "python",
+    "imports": [],
+    "apis_called": []
+  },
+  "backend/data/prediction_history.db": {
+    "path": "backend\\data\\prediction_history.db",
+    "type": "unknown",
+    "imports": [],
+    "apis_called": []
+  },
+  "backend/data/uploads/48be40ee54f0_Screenshot 2026-03-11 091252.png": {
+    "path": "backend\\data\\uploads\\48be40ee54f0_Screenshot 2026-03-11 091252.png",
+    "type": "unknown",
+    "imports": [],
+    "apis_called": []
+  },
+  "backend/data/uploads/5986616f33ef_all_departments_bugs_50k.csv": {
+    "path": "backend\\data\\uploads\\5986616f33ef_all_departments_bugs_50k.csv",
+    "type": "unknown",
+    "imports": [],
+    "apis_called": []
+  },
+  "backend/data/uploads/819af6054337_all_departments_bugs_50k.csv": {
+    "path": "backend\\data\\uploads\\819af6054337_all_departments_bugs_50k.csv",
+    "type": "unknown",
+    "imports": [],
+    "apis_called": []
+  },
+  "backend/tests/test_api.py": {
+    "path": "backend\\tests\\test_api.py",
+    "type": "python",
+    "imports": [
+      "pytest",
+      "unittest.mock",
+      "fastapi.testclient",
+      "datetime",
+      "backend.app.main",
+      "backend.app.main"
+    ],
+    "apis_called": []
+  },
+  "backend/tests/test_features.py": {
+    "path": "backend\\tests\\test_features.py",
+    "type": "python",
+    "imports": [
+      "pytest",
+      "pandas",
+      "numpy",
+      "backend.app.services.feature_engineering"
+    ],
+    "apis_called": []
+  },
+  "backend/tests/test_predict.py": {
+    "path": "backend\\tests\\test_predict.py",
+    "type": "python",
+    "imports": [
+      "pytest",
+      "unittest.mock",
+      "pandas",
+      "numpy",
+      "backend.app.services.predictor"
+    ],
+    "apis_called": []
+  },
+  "frontend/.gitignore": {
+    "path": "frontend\\.gitignore",
+    "type": "unknown",
+    "imports": [],
+    "apis_called": []
+  },
+  "frontend/Dockerfile": {
+    "path": "frontend\\Dockerfile",
+    "type": "unknown",
+    "imports": [],
+    "apis_called": []
+  },
+  "frontend/eslint.config.js": {
+    "path": "frontend\\eslint.config.js",
+    "type": "js/ts",
+    "imports": [
+      "@eslint/js",
+      "globals",
+      "eslint-plugin-react-hooks",
+      "eslint-plugin-react-refresh",
+      "eslint/config"
+    ],
+    "apis_called": []
+  },
+  "frontend/index.html": {
+    "path": "frontend\\index.html",
+    "type": "html",
+    "imports": [],
+    "apis_called": []
+  },
+  "frontend/package-lock.json": {
+    "path": "frontend\\package-lock.json",
+    "type": "json",
+    "imports": [],
+    "apis_called": []
+  },
+  "frontend/package.json": {
+    "path": "frontend\\package.json",
+    "type": "json",
+    "imports": [],
+    "apis_called": []
+  },
+  "frontend/README.md": {
+    "path": "frontend\\README.md",
+    "type": "md",
+    "imports": [],
+    "apis_called": []
+  },
+  "frontend/vite.config.js": {
+    "path": "frontend\\vite.config.js",
+    "type": "js/ts",
+    "imports": [
+      "vite",
+      "@vitejs/plugin-react",
+      "@tailwindcss/vite"
+    ],
+    "apis_called": []
+  },
+  "frontend/public/favicon.svg": {
+    "path": "frontend\\public\\favicon.svg",
+    "type": "unknown",
+    "imports": [],
+    "apis_called": []
+  },
+  "frontend/public/icons.svg": {
+    "path": "frontend\\public\\icons.svg",
+    "type": "unknown",
+    "imports": [],
+    "apis_called": []
+  },
+  "frontend/src/App.css": {
+    "path": "frontend\\src\\App.css",
+    "type": "css",
+    "imports": [],
+    "apis_called": []
+  },
+  "frontend/src/App.jsx": {
+    "path": "frontend\\src\\App.jsx",
+    "type": "js/ts",
+    "imports": [
+      "react",
+      "react-router-dom",
+      "@tanstack/react-query",
+      "./components/Layout",
+      "./pages/Dashboard",
+      "./pages/Predictor",
+      "./pages/BulkPredictor",
+      "./pages/Analytics",
+      "./pages/Monitoring",
+      "./pages/Settings",
+      "./pages/Login"
+    ],
+    "apis_called": []
+  },
+  "frontend/src/index.css": {
+    "path": "frontend\\src\\index.css",
+    "type": "css",
+    "imports": [],
+    "apis_called": []
+  },
+  "frontend/src/main.jsx": {
+    "path": "frontend\\src\\main.jsx",
+    "type": "js/ts",
+    "imports": [
+      "react",
+      "react-dom/client",
+      "./App.jsx"
+    ],
+    "apis_called": []
+  },
+  "frontend/src/assets/hero.png": {
+    "path": "frontend\\src\\assets\\hero.png",
+    "type": "unknown",
+    "imports": [],
+    "apis_called": []
+  },
+  "frontend/src/assets/logo.jpg": {
+    "path": "frontend\\src\\assets\\logo.jpg",
+    "type": "unknown",
+    "imports": [],
+    "apis_called": []
+  },
+  "frontend/src/assets/react.svg": {
+    "path": "frontend\\src\\assets\\react.svg",
+    "type": "unknown",
+    "imports": [],
+    "apis_called": []
+  },
+  "frontend/src/assets/vite.svg": {
+    "path": "frontend\\src\\assets\\vite.svg",
+    "type": "unknown",
+    "imports": [],
+    "apis_called": []
+  },
+  "frontend/src/components/GlassSurface.css": {
+    "path": "frontend\\src\\components\\GlassSurface.css",
+    "type": "css",
+    "imports": [],
+    "apis_called": []
+  },
+  "frontend/src/components/GlassSurface.jsx": {
+    "path": "frontend\\src\\components\\GlassSurface.jsx",
+    "type": "js/ts",
+    "imports": [
+      "react"
+    ],
+    "apis_called": []
+  },
+  "frontend/src/components/Layout.tsx": {
+    "path": "frontend\\src\\components\\Layout.tsx",
+    "type": "js/ts",
+    "imports": [
+      "react",
+      "react-router-dom",
+      "@tanstack/react-query",
+      "../lib/api",
+      "../lib/queryKeys",
+      "../lib/utils",
+      "../services/api"
+    ],
+    "apis_called": []
+  },
+  "frontend/src/components/MetricCard.tsx": {
+    "path": "frontend\\src\\components\\MetricCard.tsx",
+    "type": "js/ts",
+    "imports": [
+      "react",
+      "lucide-react",
+      "recharts",
+      "../lib/utils"
+    ],
+    "apis_called": []
+  },
+  "frontend/src/components/PriorityBadge.tsx": {
+    "path": "frontend\\src\\components\\PriorityBadge.tsx",
+    "type": "js/ts",
+    "imports": [
+      "react",
+      "../types",
+      "../lib/utils"
+    ],
+    "apis_called": []
+  },
+  "frontend/src/components/Charts/ClassDistribution.tsx": {
+    "path": "frontend\\src\\components\\Charts\\ClassDistribution.tsx",
+    "type": "js/ts",
+    "imports": [
+      "react",
+      "recharts",
+      "../../hooks/useChartTheme"
+    ],
+    "apis_called": []
+  },
+  "frontend/src/components/Charts/ConfidenceTrend.tsx": {
+    "path": "frontend\\src\\components\\Charts\\ConfidenceTrend.tsx",
+    "type": "js/ts",
+    "imports": [
+      "react",
+      "recharts",
+      "../../hooks/useChartTheme"
+    ],
+    "apis_called": []
+  },
+  "frontend/src/components/Charts/DepartmentMatrix.tsx": {
+    "path": "frontend\\src\\components\\Charts\\DepartmentMatrix.tsx",
+    "type": "js/ts",
+    "imports": [
+      "react",
+      "recharts",
+      "../../hooks/useChartTheme"
+    ],
+    "apis_called": []
+  },
+  "frontend/src/components/Charts/PriorityTrend.tsx": {
+    "path": "frontend\\src\\components\\Charts\\PriorityTrend.tsx",
+    "type": "js/ts",
+    "imports": [
+      "react",
+      "recharts",
+      "../../hooks/useChartTheme"
+    ],
+    "apis_called": []
+  },
+  "frontend/src/hooks/useChartTheme.ts": {
+    "path": "frontend\\src\\hooks\\useChartTheme.ts",
+    "type": "js/ts",
+    "imports": [
+      "react"
+    ],
+    "apis_called": []
+  },
+  "frontend/src/hooks/usePrediction.js": {
+    "path": "frontend\\src\\hooks\\usePrediction.js",
+    "type": "js/ts",
+    "imports": [
+      "react",
+      "../services/api"
+    ],
+    "apis_called": []
+  },
+  "frontend/src/layouts/MainLayout.jsx": {
+    "path": "frontend\\src\\layouts\\MainLayout.jsx",
+    "type": "js/ts",
+    "imports": [
+      "react",
+      "../components/Navbar",
+      "../components/Sidebar"
+    ],
+    "apis_called": []
+  },
+  "frontend/src/lib/api.ts": {
+    "path": "frontend\\src\\lib\\api.ts",
+    "type": "js/ts",
+    "imports": [],
+    "apis_called": []
+  },
+  "frontend/src/lib/queryKeys.ts": {
+    "path": "frontend\\src\\lib\\queryKeys.ts",
+    "type": "js/ts",
+    "imports": [],
+    "apis_called": []
+  },
+  "frontend/src/lib/utils.ts": {
+    "path": "frontend\\src\\lib\\utils.ts",
+    "type": "js/ts",
+    "imports": [
+      "date-fns",
+      "../types",
+      "lucide-react"
+    ],
+    "apis_called": []
+  },
+  "frontend/src/pages/Analytics.tsx": {
+    "path": "frontend\\src\\pages\\Analytics.tsx",
+    "type": "js/ts",
+    "imports": [
+      "react",
+      "@tanstack/react-query",
+      "lucide-react",
+      "../lib/api",
+      "../lib/queryKeys",
+      "../components/MetricCard",
+      "../components/Charts/PriorityTrend",
+      "../components/Charts/DepartmentMatrix",
+      "../lib/utils",
+      "../store/predictionStore"
+    ],
+    "apis_called": []
+  },
+  "frontend/src/pages/BulkPredictor.tsx": {
+    "path": "frontend\\src\\pages\\BulkPredictor.tsx",
+    "type": "js/ts",
+    "imports": [
+      "react",
+      "../lib/utils"
+    ],
+    "apis_called": [
+      "${BASE_URL}/predict-file",
+      "${BASE_URL}/predict"
+    ]
+  },
+  "frontend/src/pages/Dashboard.tsx": {
+    "path": "frontend\\src\\pages\\Dashboard.tsx",
+    "type": "js/ts",
+    "imports": [
+      "react",
+      "@tanstack/react-query",
+      "../lib/api",
+      "../lib/queryKeys",
+      "../components/Charts/ConfidenceTrend",
+      "../components/Charts/ClassDistribution",
+      "../components/PriorityBadge",
+      "../lib/utils",
+      "../store/predictionStore",
+      "react-router-dom"
+    ],
+    "apis_called": []
+  },
+  "frontend/src/pages/Login.jsx": {
+    "path": "frontend\\src\\pages\\Login.jsx",
+    "type": "js/ts",
+    "imports": [
+      "react",
+      "../assets/logo.jpg",
+      "lucide-react",
+      "../services/api"
+    ],
+    "apis_called": []
+  },
+  "frontend/src/pages/Monitoring.tsx": {
+    "path": "frontend\\src\\pages\\Monitoring.tsx",
+    "type": "js/ts",
+    "imports": [
+      "react",
+      "@tanstack/react-query",
+      "lucide-react",
+      "../lib/api",
+      "../lib/queryKeys",
+      "../components/MetricCard",
+      "../lib/utils"
+    ],
+    "apis_called": []
+  },
+  "frontend/src/pages/Predictor.tsx": {
+    "path": "frontend\\src\\pages\\Predictor.tsx",
+    "type": "js/ts",
+    "imports": [
+      "react",
+      "@tanstack/react-query",
+      "lucide-react",
+      "../lib/api",
+      "../store/predictionStore",
+      "../components/PriorityBadge",
+      "../lib/utils",
+      "../types"
+    ],
+    "apis_called": []
+  },
+  "frontend/src/pages/Settings.tsx": {
+    "path": "frontend\\src\\pages\\Settings.tsx",
+    "type": "js/ts",
+    "imports": [
+      "react",
+      "lucide-react",
+      "../lib/utils"
+    ],
+    "apis_called": [
+      "${apiUrl}/health"
+    ]
+  },
+  "frontend/src/services/api.js": {
+    "path": "frontend\\src\\services\\api.js",
+    "type": "js/ts",
+    "imports": [
+      "axios"
+    ],
+    "apis_called": []
+  },
+  "frontend/src/store/predictionStore.ts": {
+    "path": "frontend\\src\\store\\predictionStore.ts",
+    "type": "js/ts",
+    "imports": [
+      "zustand",
+      "../types"
+    ],
+    "apis_called": []
+  },
+  "frontend/src/types/index.ts": {
+    "path": "frontend\\src\\types\\index.ts",
+    "type": "js/ts",
+    "imports": [],
+    "apis_called": []
+  },
+  "mlops/drift_detection/drift.py": {
+    "path": "mlops\\drift_detection\\drift.py",
+    "type": "python",
+    "imports": [
+      "os",
+      "sys",
+      "logging",
+      "pandas",
+      "numpy",
+      "backend.app.database.database",
+      "backend.app.database.models",
+      "evidently.report",
+      "evidently.metric_preset"
+    ],
+    "apis_called": []
+  },
+  "mlops/training/retrain.py": {
+    "path": "mlops\\training\\retrain.py",
+    "type": "python",
+    "imports": [
+      "os",
+      "sys",
+      "pickle",
+      "logging",
+      "datetime",
+      "pandas",
+      "numpy",
+      "sklearn.model_selection",
+      "sklearn.metrics",
+      "backend.app.config.settings",
+      "backend.app.database.database",
+      "backend.app.database.models",
+      "mlflow",
+      "backend.app.services.feature_engineering",
+      "lightgbm",
+      "sklearn.ensemble"
+    ],
+    "apis_called": []
+  },
+  "ml_pipeline/data/raw/all_departments_bugs_50k.csv": {
+    "path": "ml_pipeline\\data\\raw\\all_departments_bugs_50k.csv",
+    "type": "unknown",
+    "imports": [],
+    "apis_called": []
+  },
+  "ml_pipeline/notebooks/01_eda.ipynb": {
+    "path": "ml_pipeline\\notebooks\\01_eda.ipynb",
+    "type": "unknown",
+    "imports": [],
+    "apis_called": []
+  },
+  "ml_pipeline/notebooks/02_preprocessing.ipynb": {
+    "path": "ml_pipeline\\notebooks\\02_preprocessing.ipynb",
+    "type": "unknown",
+    "imports": [],
+    "apis_called": []
+  },
+  "ml_pipeline/notebooks/03_train_xgboost.ipynb": {
+    "path": "ml_pipeline\\notebooks\\03_train_xgboost.ipynb",
+    "type": "unknown",
+    "imports": [],
+    "apis_called": []
+  },
+  "ml_pipeline/notebooks/04_hyperparameter_tuning.ipynb": {
+    "path": "ml_pipeline\\notebooks\\04_hyperparameter_tuning.ipynb",
+    "type": "unknown",
+    "imports": [],
+    "apis_called": []
+  },
+  "ml_pipeline/notebooks/05_explainability.ipynb": {
+    "path": "ml_pipeline\\notebooks\\05_explainability.ipynb",
+    "type": "unknown",
+    "imports": [],
+    "apis_called": []
+  },
+  "ml_pipeline/training/evaluate.py": {
+    "path": "ml_pipeline\\training\\evaluate.py",
+    "type": "python",
+    "imports": [
+      "os",
+      "pickle",
+      "logging",
+      "pandas",
+      "sklearn.metrics"
+    ],
+    "apis_called": []
+  },
+  "ml_pipeline/training/train.py": {
+    "path": "ml_pipeline\\training\\train.py",
+    "type": "python",
+    "imports": [
+      "logging",
+      "pickle",
+      "numpy",
+      "pandas",
+      "typing",
+      "sklearn.model_selection",
+      "sklearn.metrics",
+      "lightgbm",
+      "mlflow",
+      "mlflow.lightgbm",
+      "sys",
+      "mlflow",
+      "mlflow.lightgbm"
+    ],
+    "apis_called": []
+  },
+  "ml_pipeline/training/validate_data.py": {
+    "path": "ml_pipeline\\training\\validate_data.py",
+    "type": "python",
+    "imports": [
+      "logging",
+      "pandas",
+      "typing"
+    ],
+    "apis_called": []
+  },
+  "monitoring/drift_report.py": {
+    "path": "monitoring\\drift_report.py",
+    "type": "python",
+    "imports": [
+      "logging",
+      "pandas",
+      "typing",
+      "datetime",
+      "sklearn.metrics"
+    ],
+    "apis_called": []
+  },
+  "monitoring/metrics.py": {
+    "path": "monitoring\\metrics.py",
+    "type": "python",
+    "imports": [
+      "logging",
+      "datetime",
+      "typing",
+      "dataclasses"
+    ],
+    "apis_called": []
+  },
+  "monitoring/prometheus.yml": {
+    "path": "monitoring\\prometheus.yml",
+    "type": "yml",
+    "imports": [],
+    "apis_called": []
+  },
+  "scripts/generate_synthetic_data.py": {
+    "path": "scripts\\generate_synthetic_data.py",
+    "type": "python",
+    "imports": [
+      "os",
+      "random",
+      "numpy",
+      "pandas",
+      "datetime",
+      "logging",
+      "src.features",
+      "src.train"
+    ],
+    "apis_called": []
+  },
+  "scripts/train_model.py": {
+    "path": "scripts\\train_model.py",
+    "type": "python",
+    "imports": [
+      "pickle",
+      "numpy",
+      "pandas",
+      "sklearn.model_selection",
+      "sklearn.preprocessing",
+      "sklearn.metrics",
+      "lightgbm"
+    ],
+    "apis_called": []
+  },
+  "static/app.js": {
+    "path": "static\\app.js",
+    "type": "js/ts",
+    "imports": [],
+    "apis_called": [
+      "${API_BASE_URL}/health",
+      "${API_BASE_URL}/upload-image",
+      "${API_BASE_URL}/predict",
+      "${API_BASE_URL}/batch-predict",
+      "${API_BASE_URL}/metrics"
+    ]
+  },
+  "static/index.html": {
+    "path": "static\\index.html",
+    "type": "html",
+    "imports": [],
+    "apis_called": []
+  },
+  "static/style.css": {
+    "path": "static\\style.css",
+    "type": "css",
+    "imports": [],
+    "apis_called": []
+  }
+}

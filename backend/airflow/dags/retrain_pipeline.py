@@ -37,7 +37,7 @@ def extract_data(**context):
     logger.info("Extracting raw dataset...")
     import pandas as pd
     
-    df = pd.read_csv('ml_pipeline/data/raw/all_departments_bugs_50k.csv')
+    df = pd.read_csv('backend/ml_pipeline/data/raw/all_departments_bugs_50k.csv')
     logger.info(f"Extracted {len(df)} records")
     context['task_instance'].xcom_push(key='data_shape', value=df.shape)
     return f"Extracted {len(df)} records"
@@ -49,7 +49,7 @@ def validate_data(**context):
     import pandas as pd
     from ml_pipeline.training.validate_data import DataValidator
     
-    df = pd.read_csv('ml_pipeline/data/raw/all_departments_bugs_50k.csv')
+    df = pd.read_csv('backend/ml_pipeline/data/raw/all_departments_bugs_50k.csv')
     validator = DataValidator()
     validator.run_all_validations(df)
     summary = validator.get_report_summary()
@@ -68,7 +68,7 @@ def preprocess_data(**context):
     from sklearn.model_selection import train_test_split
     
     # Load and preprocess
-    df = pd.read_csv('ml_pipeline/data/raw/all_departments_bugs_50k.csv')
+    df = pd.read_csv('backend/ml_pipeline/data/raw/all_departments_bugs_50k.csv')
     
     # Handle missing values
     df = df.dropna(subset=['priority'])
@@ -90,10 +90,10 @@ def preprocess_data(**context):
         X, y, test_size=0.2, random_state=42, stratify=y
     )
     
-    X_train.to_csv('ml_pipeline/data/processed/X_train.csv', index=False)
-    X_test.to_csv('ml_pipeline/data/processed/X_test.csv', index=False)
-    y_train.to_csv('ml_pipeline/data/processed/y_train.csv', index=False)
-    y_test.to_csv('ml_pipeline/data/processed/y_test.csv', index=False)
+    X_train.to_csv('backend/ml_pipeline/data/processed/X_train.csv', index=False)
+    X_test.to_csv('backend/ml_pipeline/data/processed/X_test.csv', index=False)
+    y_train.to_csv('backend/ml_pipeline/data/processed/y_train.csv', index=False)
+    y_test.to_csv('backend/ml_pipeline/data/processed/y_test.csv', index=False)
     
     # Save fitted Feature Engineer to backend models folder
     feature_engineer.save('backend/app/models/feature_engineer.pkl')
@@ -108,8 +108,8 @@ def train_model(**context):
     from ml_pipeline.training.train import ModelTrainer
     
     # Load preprocessed data
-    X_train = pd.read_csv('ml_pipeline/data/processed/X_train.csv')
-    y_train = pd.read_csv('ml_pipeline/data/processed/y_train.csv').squeeze()
+    X_train = pd.read_csv('backend/ml_pipeline/data/processed/X_train.csv')
+    y_train = pd.read_csv('backend/ml_pipeline/data/processed/y_train.csv').squeeze()
     
     # Train model
     trainer = ModelTrainer()
@@ -121,7 +121,7 @@ def train_model(**context):
         
     # Save model to backend models folder
     trainer.save('backend/app/models/optimized_lightgbm_model.pkl')
-    trainer.feature_importance.to_csv('ml_pipeline/data/processed/feature_importance.csv', index=False)
+    trainer.feature_importance.to_csv('backend/ml_pipeline/data/processed/feature_importance.csv', index=False)
     return f"Model trained with accuracy: {training_results['metrics']['accuracy']:.4f}"
 
 
@@ -133,8 +133,8 @@ def evaluate_model(**context):
     
     run_eval(
         model_path='backend/app/models/optimized_lightgbm_model.pkl',
-        x_test_path='ml_pipeline/data/processed/X_test.csv',
-        y_test_path='ml_pipeline/data/processed/y_test.csv'
+        x_test_path='backend/ml_pipeline/data/processed/X_test.csv',
+        y_test_path='backend/ml_pipeline/data/processed/y_test.csv'
     )
     return "Model evaluation complete"
 

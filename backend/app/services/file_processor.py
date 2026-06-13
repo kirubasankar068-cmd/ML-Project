@@ -47,8 +47,16 @@ class FileProcessor:
     def _parse_csv(self, file_path: str) -> List[Dict[str, Any]]:
         """Parses CSV to dict list, automatically finding headers"""
         try:
-            df = pd.read_csv(file_path)
+            df = pd.read_csv(file_path, encoding='utf-8', on_bad_lines='skip')
+            logger.info(f"CSV loaded: {len(df)} rows, columns: {df.columns.tolist()}")
             return self._map_dataframe(df)
+        except UnicodeDecodeError:
+            try:
+                df = pd.read_csv(file_path, encoding='latin-1', on_bad_lines='skip')
+                return self._map_dataframe(df)
+            except Exception as e:
+                logger.error(f"Failed to parse CSV (latin-1): {e}")
+                raise ValueError(f"Invalid CSV structure: {e}")
         except Exception as e:
             logger.error(f"Failed to parse CSV: {e}")
             raise ValueError(f"Invalid CSV structure: {e}")
@@ -135,34 +143,63 @@ class FileProcessor:
             
     def _map_dataframe(self, df: pd.DataFrame) -> List[Dict[str, Any]]:
         """Finds closest matching columns and converts dataframe to standard dictionary structure"""
+        # Normalise column names: lowercase, strip whitespace
+        df.columns = [str(c).lower().strip() for c in df.columns]
         cols = df.columns.tolist()
-        
-        # Mappings
-        title_col = self._find_match(cols, ["title", "summary", "name", "subject"]) or cols[0]
-        desc_col = self._find_match(cols, ["description", "desc", "details", "body"]) or (cols[1] if len(cols) > 1 else cols[0])
-        sev_col = self._find_match(cols, ["severity", "sev", "type"])
-        comp_col = self._find_match(cols, ["component", "module", "area"])
-        users_col = self._find_match(cols, ["affected_users", "users", "impact"])
-        rep_col = self._find_match(cols, ["is_reproducible", "reproducible", "repro"])
-        
+        logger.info(f"Normalised columns: {cols}")
+
+        title_col = self._find_match(cols, ["title", "summary", "name", "subject", "bug_title"]) or cols[0]
+        desc_col  = self._find_match(cols, ["description", "desc", "details", "body", "bug_description"]) or (cols[1] if len(cols) > 1 else cols[0])
+        sev_col   = self._find_match(cols, ["severity", "sev", "type", "priority", "level"])
+        comp_col  = self._find_match(cols, ["component", "module", "area", "service", "system"])
+        users_col = self._find_match(cols, ["affected_users", "users", "impact", "user_count"])
+        rep_col   = self._find_match(cols, ["is_reproducible", "reproducible", "repro", "reproduce"])
+        steps_col = self._find_match(cols, ["steps_to_reproduce", "steps", "repro_steps", "reproduction"])
+        role_col  = self._find_match(cols, ["user_role", "reporter", "reported_by", "role", "submitter"])
+        env_col   = self._find_match(cols, ["environment", "env", "platform"])
+
         bugs = []
         for _, row in df.iterrows():
-            bug = {
-                "title": str(row[title_col]) if pd.notna(row[title_col]) else "Untitled Report",
-                "description": str(row[desc_col]) if pd.notna(row[desc_col]) else "No description provided.",
-                "severity": str(row[sev_col]).lower() if sev_col and pd.notna(row[sev_col]) else "medium",
-                "component": str(row[comp_col]) if comp_col and pd.notna(row[comp_col]) else "General",
+            def safe(col: str, default: str = '') -> str:
+                if col and col in df.columns and pd.notna(row[col]):
+                    return str(row[col]).strip()
+                return default
+
+            sev_raw = safe(sev_col, 'medium').lower()
+            # Map common priority labels → severity scale
+            sev_map = {
+                'critical': 'critical', 'blocker': 'critical', 'p0': 'critical',
+                'high': 'high', 'major': 'high', 'p1': 'high',
+                'medium': 'medium', 'normal': 'medium', 'moderate': 'medium', 'p2': 'medium',
+                'low': 'low', 'minor': 'low', 'trivial': 'low', 'p3': 'low', 'p4': 'low',
             }
-            if users_col and pd.notna(row[users_col]):
+            severity = sev_map.get(sev_raw, 'medium')
+
+            bug = {
+                "title":       safe(title_col, f"Bug #{_ + 1}"),
+                "description": safe(desc_col, "No description provided."),
+                "severity":    severity,
+                "component":   safe(comp_col, "General"),
+                "steps_to_reproduce": safe(steps_col, ""),
+                "reported_by": safe(role_col, "system"),
+                "environment": safe(env_col, "Production"),
+                "module":      safe(comp_col, "General"),
+                "is_reproducible": True,
+            }
+
+            if users_col:
                 try:
-                    bug["affected_users"] = int(row[users_col])
-                except:
-                    pass
-            if rep_col and pd.notna(row[rep_col]):
-                val = str(row[rep_col]).lower()
-                bug["is_reproducible"] = val in ["true", "1", "yes"]
-                
+                    bug["affected_users"] = int(float(safe(users_col, '1')))
+                except (ValueError, TypeError):
+                    bug["affected_users"] = 1
+
+            if rep_col:
+                val = safe(rep_col, 'true').lower()
+                bug["is_reproducible"] = val in ["true", "1", "yes", "y"]
+
             bugs.append(bug)
+
+        logger.info(f"Mapped {len(bugs)} bugs from dataframe")
         return bugs
         
     def _find_match(self, cols: List[str], targets: List[str]) -> str:
@@ -174,26 +211,34 @@ class FileProcessor:
         return None
         
     def _sanitize_bug(self, bug: Dict[str, Any], index: int) -> Dict[str, Any]:
-        """Ensures that all fields conform to Pydantic rules and sets reasonable fallbacks"""
+        """Ensures all fields conform to Pydantic rules and sets reasonable fallbacks"""
+        title = str(bug.get("title") or f"Bug Report #{index + 1}").strip()
+        desc  = str(bug.get("description") or "No description provided.").strip()
+
+        # Minimum length guard for Pydantic validators
+        if len(title) < 5:
+            title = f"{title} (Bug Report #{index + 1})"
+        if len(desc) < 10:
+            desc = f"{desc} — reported issue #{index + 1} requires investigation."
+
+        severity = str(bug.get("severity") or "medium").lower().strip()
+        if severity not in ["low", "medium", "high", "critical"]:
+            severity = "medium"
+
         cleaned = {
-            "title": bug.get("title", f"Bug Report #{index+1}").strip(),
-            "description": bug.get("description", "No description provided.").strip(),
-            "severity": bug.get("severity", "medium").lower().strip(),
-            "component": bug.get("component", "General").strip(),
-            "affected_users": bug.get("affected_users", 1),
-            "is_reproducible": bug.get("is_reproducible", True),
-            "reported_by": bug.get("reported_by", "system"),
-            "environment": bug.get("environment", "Production"),
-            "module": bug.get("module", "General")
+            "title":              title[:500],
+            "description":        desc[:5000],
+            "severity":           severity,
+            "component":          str(bug.get("component") or "General").strip()[:100],
+            "affected_users":     max(1, int(bug.get("affected_users") or 1)),
+            "is_reproducible":    bool(bug.get("is_reproducible", True)),
+            "reported_by":        str(bug.get("reported_by") or "system")[:100],
+            "environment":        str(bug.get("environment") or "Production")[:100],
+            "module":             str(bug.get("module") or "General")[:100],
+            "steps_to_reproduce": str(bug.get("steps_to_reproduce") or "")[:2000],
         }
-        
-        # Enforce severity boundaries
-        if cleaned["severity"] not in ["low", "medium", "high", "critical"]:
-            cleaned["severity"] = "medium"
-            
-        if not isinstance(cleaned["is_reproducible"], bool):
-            cleaned["is_reproducible"] = True
-            
+
+        logger.debug(f"Sanitized bug #{index + 1}: title='{cleaned['title'][:40]}' severity={cleaned['severity']}")
         return cleaned
 
 file_processor = FileProcessor()

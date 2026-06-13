@@ -14,6 +14,9 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         uploadedImageBase64: null,
         uploadedImageFilename: null,
+        imageSource: null,          // 'upload' | 'capture'
+        imageAnalysisData: null,    // analysis result object
+        imageAnalyzeMode: true,     // true = analyze, false = attach only
         batchBugsData: []
     };
 
@@ -315,6 +318,33 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnRemoveImg = document.getElementById('btn-remove-img');
     const predictBtn = document.getElementById('btn-predict-single');
     const resultCard = document.getElementById('prediction-result-card');
+    const btnCaptureScreenshot = document.getElementById('btn-capture-screenshot');
+    const imgAnalyzingOverlay = document.getElementById('img-analyzing-overlay');
+    const imgAnalysisPreview = document.getElementById('img-analysis-preview');
+    const imgSignalTags = document.getElementById('img-signal-tags');
+    const imgAnalysisInsight = document.getElementById('img-analysis-insight');
+    const imgSeverityBadge = document.getElementById('img-analysis-severity-badge');
+    const modeAnalyzeBtn = document.getElementById('mode-analyze');
+    const modeAttachBtn = document.getElementById('mode-attach');
+
+    // Image mode toggle
+    modeAnalyzeBtn.addEventListener('click', () => {
+        state.imageAnalyzeMode = true;
+        modeAnalyzeBtn.classList.add('active');
+        modeAttachBtn.classList.remove('active');
+        // Re-analyze current image if present
+        if (state.uploadedImageBase64) {
+            runImageAnalysis(state.uploadedImageBase64);
+        }
+    });
+
+    modeAttachBtn.addEventListener('click', () => {
+        state.imageAnalyzeMode = false;
+        modeAttachBtn.classList.add('active');
+        modeAnalyzeBtn.classList.remove('active');
+        imgAnalysisPreview.style.display = 'none';
+        state.imageAnalysisData = null;
+    });
 
     // Drag and drop events
     ['dragenter', 'dragover'].forEach(eventName => {
@@ -334,11 +364,11 @@ document.addEventListener('DOMContentLoaded', () => {
     dragArea.addEventListener('drop', (e) => {
         const dt = e.dataTransfer;
         const files = dt.files;
-        handleImageFile(files[0]);
+        handleImageFile(files[0], 'upload');
     });
 
     imageUpload.addEventListener('change', (e) => {
-        handleImageFile(e.target.files[0]);
+        handleImageFile(e.target.files[0], 'upload');
     });
 
     btnRemoveImg.addEventListener('click', (e) => {
@@ -347,27 +377,324 @@ document.addEventListener('DOMContentLoaded', () => {
         resetImageUpload();
     });
 
-    function handleImageFile(file) {
+    // Screenshot capture using Screen Capture API
+    btnCaptureScreenshot.addEventListener('click', async () => {
+        try {
+            btnCaptureScreenshot.classList.add('capturing');
+            btnCaptureScreenshot.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i><span>Capturing...</span>';
+
+            // Request screen capture
+            const stream = await navigator.mediaDevices.getDisplayMedia({
+                video: { mediaSource: 'screen', cursor: 'always' },
+                preferCurrentTab: true
+            });
+
+            // Create video element to capture frame
+            const video = document.createElement('video');
+            video.srcObject = stream;
+            video.autoplay = true;
+
+            await new Promise(resolve => {
+                video.onloadedmetadata = () => {
+                    video.play();
+                    resolve();
+                };
+            });
+
+            // Small delay to let frame render
+            await new Promise(r => setTimeout(r, 300));
+
+            // Draw frame to canvas
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0);
+
+            // Stop stream tracks
+            stream.getTracks().forEach(t => t.stop());
+
+            const dataUrl = canvas.toDataURL('image/png');
+            handleImageDataUrl(dataUrl, 'capture');
+
+        } catch (err) {
+            if (err.name !== 'NotAllowedError') {
+                showToast('Screenshot capture failed: ' + err.message, 'error');
+            } else {
+                showToast('Screenshot capture cancelled', 'info');
+            }
+        } finally {
+            btnCaptureScreenshot.classList.remove('capturing');
+            btnCaptureScreenshot.innerHTML = '<i class="fa-solid fa-camera-retro"></i><span>Capture Screenshot</span>';
+        }
+    });
+
+    function handleImageFile(file, source = 'upload') {
         if (!file || !file.type.startsWith('image/')) {
-            showToast('Please upload an image file', 'error');
+            showToast('Please upload an image file (JPG, PNG, WEBP)', 'error');
             return;
         }
-
+        if (file.size > 10 * 1024 * 1024) {
+            showToast('Image size exceeds 10MB limit', 'error');
+            return;
+        }
         const reader = new FileReader();
         reader.readAsDataURL(file);
         reader.onloadend = () => {
-            state.uploadedImageBase64 = reader.result;
-            imagePreview.src = reader.result;
-            imagePreviewContainer.style.display = 'flex';
+            handleImageDataUrl(reader.result, source);
         };
+    }
+
+    function handleImageDataUrl(dataUrl, source = 'upload') {
+        state.uploadedImageBase64 = dataUrl;
+        state.imageSource = source;
+        imagePreview.src = dataUrl;
+        imagePreviewContainer.style.display = 'flex';
+
+        if (state.imageAnalyzeMode) {
+            runImageAnalysis(dataUrl);
+        }
+
+        // Show source toast
+        const sourceLabel = source === 'capture' ? '📸 Screenshot captured' : '🖼️ Image uploaded';
+        showToast(sourceLabel + (state.imageAnalyzeMode ? ' — analyzing for bug signals...' : ''), 'success');
     }
 
     function resetImageUpload() {
         state.uploadedImageBase64 = null;
         state.uploadedImageFilename = null;
+        state.imageSource = null;
+        state.imageAnalysisData = null;
         imageUpload.value = '';
         imagePreview.src = '#';
         imagePreviewContainer.style.display = 'none';
+        imgAnalysisPreview.style.display = 'none';
+    }
+
+    // =====================================================
+    // IMAGE ANALYSIS ENGINE (Canvas-based Computer Vision)
+    // =====================================================
+    async function runImageAnalysis(dataUrl) {
+        // Show analyzing overlay
+        imgAnalyzingOverlay.style.display = 'flex';
+        imgAnalysisPreview.style.display = 'none';
+
+        try {
+            const result = await analyzeImageCanvas(dataUrl);
+            state.imageAnalysisData = result;
+            displayImageAnalysisPreview(result);
+        } catch (err) {
+            console.warn('Image analysis error:', err);
+            imgAnalysisPreview.style.display = 'none';
+        } finally {
+            imgAnalyzingOverlay.style.display = 'none';
+        }
+    }
+
+    function analyzeImageCanvas(dataUrl) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => {
+                try {
+                    const canvas = document.createElement('canvas');
+                    // Downsample for performance: max 400px
+                    const scale = Math.min(1, 400 / Math.max(img.width, img.height));
+                    canvas.width = Math.floor(img.width * scale);
+                    canvas.height = Math.floor(img.height * scale);
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const pixels = imageData.data;
+                    const totalPixels = canvas.width * canvas.height;
+
+                    let totalR = 0, totalG = 0, totalB = 0;
+                    let redPixels = 0, darkPixels = 0, brightPixels = 0;
+                    let orangePixels = 0, yellowPixels = 0;
+                    let minLum = 255, maxLum = 0;
+                    const lumValues = [];
+
+                    for (let i = 0; i < pixels.length; i += 4) {
+                        const r = pixels[i];
+                        const g = pixels[i + 1];
+                        const b = pixels[i + 2];
+
+                        totalR += r; totalG += g; totalB += b;
+
+                        // Luminance (perceived brightness)
+                        const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+                        lumValues.push(lum);
+                        if (lum < minLum) minLum = lum;
+                        if (lum > maxLum) maxLum = lum;
+
+                        if (lum < 60) darkPixels++;
+                        if (lum > 200) brightPixels++;
+
+                        // Red dominance (errors, alerts)
+                        if (r > 160 && r > g * 1.5 && r > b * 1.5) redPixels++;
+                        // Orange (warnings)
+                        if (r > 180 && g > 80 && g < 160 && b < 80) orangePixels++;
+                        // Yellow (caution)
+                        if (r > 180 && g > 160 && b < 80) yellowPixels++;
+                    }
+
+                    const avgR = totalR / totalPixels;
+                    const avgG = totalG / totalPixels;
+                    const avgB = totalB / totalPixels;
+                    const avgBrightness = (avgR * 0.299 + avgG * 0.587 + avgB * 0.114);
+
+                    const redRatio = redPixels / totalPixels;
+                    const orangeRatio = orangePixels / totalPixels;
+                    const yellowRatio = yellowPixels / totalPixels;
+                    const darkRatio = darkPixels / totalPixels;
+                    const brightRatio = brightPixels / totalPixels;
+
+                    // Contrast estimation (difference of high/low luminance)
+                    const contrast = (maxLum - minLum) / 255;
+
+                    // Edge density estimation via simple pixel diff
+                    let edgeCount = 0;
+                    const w = canvas.width;
+                    for (let y = 1; y < canvas.height - 1; y++) {
+                        for (let x = 1; x < w - 1; x++) {
+                            const idx = (y * w + x) * 4;
+                            const idxRight = (y * w + x + 1) * 4;
+                            const idxDown = ((y + 1) * w + x) * 4;
+                            const diffH = Math.abs(pixels[idx] - pixels[idxRight]) +
+                                          Math.abs(pixels[idx+1] - pixels[idxRight+1]) +
+                                          Math.abs(pixels[idx+2] - pixels[idxRight+2]);
+                            const diffV = Math.abs(pixels[idx] - pixels[idxDown]) +
+                                          Math.abs(pixels[idx+1] - pixels[idxDown+1]) +
+                                          Math.abs(pixels[idx+2] - pixels[idxDown+2]);
+                            if (diffH + diffV > 80) edgeCount++;
+                        }
+                    }
+                    const edgeDensity = edgeCount / ((canvas.width - 2) * (canvas.height - 2));
+
+                    // Entropy (image complexity / information density)
+                    const histR = new Array(32).fill(0);
+                    for (let i = 0; i < pixels.length; i += 4) {
+                        histR[Math.floor(pixels[i] / 8)]++;
+                    }
+                    let entropy = 0;
+                    for (const cnt of histR) {
+                        if (cnt > 0) {
+                            const p = cnt / totalPixels;
+                            entropy -= p * Math.log2(p);
+                        }
+                    }
+                    const normalizedEntropy = entropy / 5.0; // 5 = max ~log2(32)
+
+                    // Dominant color region (top-left 20% - often where errors appear in UIs)
+                    const regionCanvas = document.createElement('canvas');
+                    regionCanvas.width = Math.max(1, Math.floor(canvas.width * 0.3));
+                    regionCanvas.height = Math.max(1, Math.floor(canvas.height * 0.2));
+                    const rCtx = regionCanvas.getContext('2d');
+                    rCtx.drawImage(img, 0, 0, regionCanvas.width * (1/scale), regionCanvas.height * (1/scale), 0, 0, regionCanvas.width, regionCanvas.height);
+                    const regionData = rCtx.getImageData(0, 0, regionCanvas.width, regionCanvas.height).data;
+                    let regionRedPixels = 0;
+                    for (let i = 0; i < regionData.length; i += 4) {
+                        if (regionData[i] > 150 && regionData[i] > regionData[i+1] * 1.4 && regionData[i] > regionData[i+2] * 1.4) regionRedPixels++;
+                    }
+                    const regionRedRatio = regionRedPixels / (regionCanvas.width * regionCanvas.height);
+
+                    // ---- Generate signals ----
+                    const signals = [];
+                    let severityScore = 0; // 0–10 scale
+
+                    if (redRatio > 0.08) {
+                        signals.push({ level: 'critical', icon: 'fa-circle-exclamation', title: 'High Red Color Presence', detail: `${(redRatio * 100).toFixed(1)}% red pixels detected — common in error dialogs, crash screens` });
+                        severityScore += redRatio > 0.15 ? 3 : 1.5;
+                    }
+                    if (regionRedRatio > 0.05) {
+                        signals.push({ level: 'high', icon: 'fa-triangle-exclamation', title: 'Top-region Alert Colors', detail: 'Red/error tones detected in header region — likely error banner or alert bar' });
+                        severityScore += 1.5;
+                    }
+                    if (orangeRatio > 0.05) {
+                        signals.push({ level: 'medium', icon: 'fa-bell', title: 'Warning Color Presence', detail: `${(orangeRatio * 100).toFixed(1)}% orange tones — may indicate warning or degraded state` });
+                        severityScore += 1.0;
+                    }
+                    if (darkRatio > 0.5 && avgBrightness < 80) {
+                        signals.push({ level: 'high', icon: 'fa-moon', title: 'Dark Screen / Crash Detected', detail: 'Predominantly dark image — may indicate black screen, crash, or UI freeze' });
+                        severityScore += 2.0;
+                    }
+                    if (contrast > 0.7) {
+                        signals.push({ level: 'medium', icon: 'fa-adjust', title: 'High Contrast Interface', detail: 'High contrast suggests complex error message with distinct dialog boxes' });
+                        severityScore += 0.5;
+                    }
+                    if (edgeDensity > 0.25) {
+                        signals.push({ level: 'info', icon: 'fa-table-cells', title: 'Complex UI Structure', detail: `Edge density ${(edgeDensity * 100).toFixed(0)}% — rich UI with many elements, likely technical screen` });
+                        severityScore += 0.5;
+                    }
+                    if (normalizedEntropy > 0.75) {
+                        signals.push({ level: 'info', icon: 'fa-database', title: 'High Information Density', detail: 'Image contains dense information — possibly log output or data-heavy screen' });
+                        severityScore += 0.3;
+                    }
+                    if (yellowRatio > 0.04) {
+                        signals.push({ level: 'medium', icon: 'fa-star', title: 'Caution Colors Detected', detail: `${(yellowRatio * 100).toFixed(1)}% yellow tones — may indicate warning or highlighted state` });
+                        severityScore += 0.5;
+                    }
+                    if (brightRatio > 0.6 && redRatio < 0.03) {
+                        signals.push({ level: 'low', icon: 'fa-sun', title: 'Clean / Normal Screen State', detail: 'Bright, balanced image with no obvious error tones — may indicate minor visual bug' });
+                        severityScore = Math.max(0, severityScore - 1);
+                    }
+                    if (signals.length === 0) {
+                        signals.push({ level: 'info', icon: 'fa-circle-info', title: 'No Obvious Error Signals', detail: 'No strong color-based severity signals detected. Using form fields for prediction.' });
+                    }
+
+                    // Clamp score 0–10
+                    severityScore = Math.min(10, Math.max(0, severityScore));
+
+                    // Map to severity label
+                    let imageSeverity = 'Low';
+                    if (severityScore >= 7) imageSeverity = 'Critical';
+                    else if (severityScore >= 4.5) imageSeverity = 'High';
+                    else if (severityScore >= 2) imageSeverity = 'Medium';
+
+                    // Impact on prediction (0.0 – 0.35 = up to 35% influence)
+                    const imageContribution = Math.min(0.35, severityScore / 10 * 0.35);
+
+                    resolve({
+                        avgBrightness: Math.round(avgBrightness),
+                        redRatio: parseFloat((redRatio * 100).toFixed(1)),
+                        contrast: parseFloat((contrast * 100).toFixed(0)),
+                        edgeDensity: parseFloat((edgeDensity * 100).toFixed(0)),
+                        entropy: parseFloat((normalizedEntropy * 100).toFixed(0)),
+                        severityScore: parseFloat(severityScore.toFixed(1)),
+                        imageSeverity,
+                        imageContribution: parseFloat(imageContribution.toFixed(3)),
+                        signals,
+                        dimensions: `${img.width}×${img.height}`
+                    });
+                } catch (err2) {
+                    reject(err2);
+                }
+            };
+            img.onerror = reject;
+            img.src = dataUrl;
+        });
+    }
+
+    function displayImageAnalysisPreview(result) {
+        // Set severity badge
+        imgSeverityBadge.textContent = result.imageSeverity;
+        imgSeverityBadge.className = 'img-analysis-badge badge-' + result.imageSeverity.toLowerCase();
+
+        // Build signal tags
+        imgSignalTags.innerHTML = '';
+        const tagClasses = { critical: 'tag-error', high: 'tag-error', medium: 'tag-warning', low: 'tag-success', info: 'tag-info' };
+        const tagIcons = { critical: '🔴', high: '🟠', medium: '🟡', low: '🟢', info: '🔵' };
+        result.signals.slice(0, 4).forEach(sig => {
+            const tag = document.createElement('span');
+            tag.className = 'img-signal-tag ' + (tagClasses[sig.level] || 'tag-info');
+            tag.textContent = tagIcons[sig.level] + ' ' + sig.title;
+            imgSignalTags.appendChild(tag);
+        });
+
+        // Insight text
+        imgAnalysisInsight.innerHTML = `<strong>Score: ${result.severityScore}/10</strong> · ${result.signals[0]?.detail || 'Analysis complete'}. <em>This will ${result.imageContribution > 0.1 ? 'significantly' : 'slightly'} adjust the priority prediction.</em>`;
+
+        imgAnalysisPreview.style.display = 'block';
     }
 
     // Submit prediction form
@@ -441,6 +768,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         reasoning: apiData.reasoning,
                         timestamp: apiData.timestamp
                     };
+
+                    // If image analysis available, blend it into confidence
+                    if (state.imageAnalysisData && state.imageAnalyzeMode) {
+                        predictionResult = blendImageSignals(predictionResult, state.imageAnalysisData);
+                    }
                 } else {
                     const errData = await response.json();
                     throw new Error(errData.error || 'Prediction service error');
@@ -456,15 +788,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (bugReport.affected_users > 100) mockScore += 0.8;
                 if (bugReport.is_reproducible) mockScore += 0.5;
 
+                // Blend in image analysis signals if available
+                const imgData = state.imageAnalyzeMode ? state.imageAnalysisData : null;
+                if (imgData) {
+                    // Image severity score (0–10) adds up to 1.5 to mock score
+                    mockScore += (imgData.severityScore / 10) * 1.5;
+                }
+
                 let mockPriority = 'Low';
                 let mockRec = 'Add to backlog for future consideration';
                 let mockReason = 'Low impact or severity';
 
-                if (mockScore >= 3.0) {
+                if (mockScore >= 3.5) {
                     mockPriority = 'Critical';
                     mockRec = 'URGENT: Assign to senior developer immediately';
                     mockReason = `Critical severity reported; Reproducible bug affecting ${bugReport.affected_users} users`;
-                } else if (mockScore >= 2.0) {
+                } else if (mockScore >= 2.2) {
                     mockPriority = 'High';
                     mockRec = 'Prioritize in sprint planning';
                     mockReason = `High severity/impact bug reported affecting ${bugReport.affected_users} users`;
@@ -474,21 +813,49 @@ document.addEventListener('DOMContentLoaded', () => {
                     mockReason = 'Medium severity issue; Bug is reproducible';
                 }
 
-                const mockProbs = { Low: 0.1, Medium: 0.1, High: 0.1, Critical: 0.1 };
-                mockProbs[mockPriority] = 0.7; // Major weight on predicted class
+                // If image signals strongly suggest critical, escalate
+                if (imgData && imgData.imageSeverity === 'Critical' && mockPriority !== 'Critical') {
+                    const prevPriority = mockPriority;
+                    const priorities = ['Low', 'Medium', 'High', 'Critical'];
+                    const idx = priorities.indexOf(mockPriority);
+                    mockPriority = priorities[Math.min(idx + 1, 3)];
+                    mockReason += `. Screenshot analysis detected critical visual signals (escalated from ${prevPriority})`;
+                    mockRec = mockPriority === 'Critical' ? 'URGENT: Assign to senior developer immediately' : 'Prioritize in sprint planning';
+                }
+
+                const mockProbs = { Low: 0.08, Medium: 0.08, High: 0.08, Critical: 0.08 };
+                mockProbs[mockPriority] = 0.76;
+
+                // Adjust probabilities based on image signals
+                if (imgData && imgData.imageContribution > 0) {
+                    const imgSevMap = { Low: 0, Medium: 1, High: 2, Critical: 3 };
+                    const priorities = ['Low', 'Medium', 'High', 'Critical'];
+                    const imgIdx = imgSevMap[imgData.imageSeverity];
+                    priorities.forEach((p, i) => {
+                        const dist = Math.abs(i - imgIdx);
+                        const boost = imgData.imageContribution * Math.max(0, 1 - dist * 0.4);
+                        mockProbs[p] = Math.min(0.95, mockProbs[p] + boost);
+                    });
+                }
                 
-                // Normalize probabilities to sum up to 1
+                // Normalize probabilities
                 const sum = Object.values(mockProbs).reduce((a, b) => a + b, 0);
                 Object.keys(mockProbs).forEach(k => mockProbs[k] = mockProbs[k]/sum);
+
+                // Confidence boosted by image analysis
+                let confidence = 0.75;
+                if (imgData && state.imageAnalyzeMode) {
+                    confidence = Math.min(0.97, confidence + imgData.imageContribution * 0.6);
+                }
 
                 predictionResult = {
                     bug_id: `MOCK_${Date.now()}`,
                     priority: mockPriority,
                     priority_score: mockScore,
-                    confidence: 0.78,
+                    confidence: confidence,
                     probabilities: mockProbs,
                     recommendation: mockRec,
-                    reasoning: `${mockReason} (Simulated Mock Prediction)`,
+                    reasoning: `${mockReason}${imgData && state.imageAnalyzeMode ? ` | Image Analysis Score: ${imgData.severityScore}/10 (${imgData.imageSeverity})` : ''} (Simulated Prediction)`,
                     timestamp: new Date().toISOString()
                 };
             }
@@ -524,6 +891,30 @@ document.addEventListener('DOMContentLoaded', () => {
             predictBtn.querySelector('.spinner').style.display = 'none';
         }
     });
+
+    // Blend image signals with API result
+    function blendImageSignals(result, imgData) {
+        if (!imgData) return result;
+        const sevOrder = { Low: 0, Medium: 1, High: 2, Critical: 3 };
+        const priorities = ['Low', 'Medium', 'High', 'Critical'];
+        const imgIdx = sevOrder[imgData.imageSeverity] || 0;
+        // Boost probabilities toward image severity level
+        Object.keys(result.probabilities).forEach((p, i) => {
+            const dist = Math.abs(priorities.indexOf(p) - imgIdx);
+            const boost = imgData.imageContribution * Math.max(0, 1 - dist * 0.35);
+            result.probabilities[p] = Math.min(0.99, result.probabilities[p] + boost);
+        });
+        // Re-normalize
+        const total = Object.values(result.probabilities).reduce((a, b) => a + b, 0);
+        Object.keys(result.probabilities).forEach(k => result.probabilities[k] /= total);
+        // Potentially upgrade priority
+        if (imgData.severityScore >= 7 && sevOrder[result.priority] < 3) {
+            result.reasoning += ` [Image signals suggest escalation: ${imgData.imageSeverity}]`;
+        }
+        // Boost confidence
+        result.confidence = Math.min(0.97, result.confidence + imgData.imageContribution * 0.5);
+        return result;
+    }
 
     function displayPredictionResult(res, latency) {
         // Swap placeholders
@@ -593,10 +984,93 @@ document.addEventListener('DOMContentLoaded', () => {
         const screenshotImg = document.getElementById('result-screenshot-img');
         
         if (state.uploadedImageBase64) {
+            // Add source badge to the h3
+            const srcBadge = state.imageSource === 'capture'
+                ? `<span class="img-source-badge source-capture"><i class="fa-solid fa-camera-retro"></i> Captured</span>`
+                : `<span class="img-source-badge source-upload"><i class="fa-solid fa-cloud-arrow-up"></i> Uploaded</span>`;
+            screenshotBox.querySelector('h3').innerHTML = `<i class="fa-solid fa-image"></i> Attached Screenshot ${srcBadge}`;
             screenshotImg.src = state.uploadedImageBase64;
             screenshotBox.style.display = 'block';
         } else {
             screenshotBox.style.display = 'none';
+        }
+
+        // === Image Analysis Result Panel ===
+        const imgResultPanel = document.getElementById('img-analysis-result-panel');
+        const imgData = state.imageAnalyzeMode ? state.imageAnalysisData : null;
+
+        if (imgData && state.uploadedImageBase64) {
+            imgResultPanel.style.display = 'block';
+
+            // Grade (A-F scale from severity score)
+            const gradeEl = document.getElementById('img-result-grade');
+            const grade = imgData.severityScore >= 8 ? 'F' :
+                          imgData.severityScore >= 6 ? 'D' :
+                          imgData.severityScore >= 4 ? 'C' :
+                          imgData.severityScore >= 2 ? 'B' : 'A';
+            gradeEl.textContent = grade;
+            gradeEl.style.color = grade === 'A' ? 'var(--color-low)' :
+                                   grade === 'B' ? 'var(--color-low)' :
+                                   grade === 'C' ? 'var(--color-medium)' :
+                                   grade === 'D' ? 'var(--color-high)' : 'var(--color-critical)';
+
+            // Metrics strip
+            const metricsEl = document.getElementById('img-analysis-metrics');
+            metricsEl.innerHTML = `
+                <div class="img-metric-item">
+                    <div class="img-metric-value">${imgData.avgBrightness}</div>
+                    <div class="img-metric-label">Brightness</div>
+                </div>
+                <div class="img-metric-item">
+                    <div class="img-metric-value">${imgData.redRatio}%</div>
+                    <div class="img-metric-label">Red Pixels</div>
+                </div>
+                <div class="img-metric-item">
+                    <div class="img-metric-value">${imgData.contrast}%</div>
+                    <div class="img-metric-label">Contrast</div>
+                </div>
+                <div class="img-metric-item">
+                    <div class="img-metric-value">${imgData.edgeDensity}%</div>
+                    <div class="img-metric-label">Edge Density</div>
+                </div>
+                <div class="img-metric-item">
+                    <div class="img-metric-value">${imgData.severityScore}/10</div>
+                    <div class="img-metric-label">Sev. Score</div>
+                </div>
+                <div class="img-metric-item">
+                    <div class="img-metric-value">${imgData.dimensions}</div>
+                    <div class="img-metric-label">Resolution</div>
+                </div>
+            `;
+
+            // Detected signals list
+            const sigEl = document.getElementById('img-detected-signals');
+            const levelIcon = { critical: 'fa-circle-xmark', high: 'fa-triangle-exclamation', medium: 'fa-bell', low: 'fa-circle-check', info: 'fa-circle-info' };
+            sigEl.innerHTML = `
+                <div class="img-detected-signals-title">Detected Visual Signals (${imgData.signals.length})</div>
+                <div class="img-signal-list">
+                    ${imgData.signals.map(sig => `
+                        <div class="img-signal-row sig-${sig.level}">
+                            <i class="fa-solid ${levelIcon[sig.level] || 'fa-circle-info'}"></i>
+                            <div class="img-signal-row-text">
+                                <strong>${sig.title}</strong><br>
+                                <span>${sig.detail}</span>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+
+            // Contribution bar with animation
+            const pct = Math.round(imgData.imageContribution * 100);
+            document.getElementById('img-contribution-pct').textContent = `${pct}%`;
+            // Animate after DOM update
+            setTimeout(() => {
+                document.getElementById('img-contribution-bar').style.width = `${pct}%`;
+            }, 200);
+
+        } else {
+            imgResultPanel.style.display = 'none';
         }
     }
 

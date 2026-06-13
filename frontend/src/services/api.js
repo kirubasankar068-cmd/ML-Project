@@ -53,10 +53,29 @@ export const authAPI = {
     }
     return res.data;
   },
+  register: async (username, password) => {
+    const res = await API.post('/register', { username, password });
+    if (res.data && res.data.access_token) {
+      localStorage.setItem('token', res.data.access_token);
+      localStorage.setItem('role', res.data.role);
+      localStorage.setItem('username', res.data.username);
+    }
+    return res.data;
+  },
+  googleLogin: async (credential, clientId) => {
+    const res = await API.post('/google-login', { credential, client_id: clientId });
+    if (res.data && res.data.access_token) {
+      localStorage.setItem('token', res.data.access_token);
+      localStorage.setItem('role', res.data.role);
+      localStorage.setItem('username', res.data.username);
+    }
+    return res.data;
+  },
   logout: () => {
     localStorage.removeItem('token');
     localStorage.removeItem('role');
     localStorage.removeItem('username');
+    localStorage.removeItem('dev_bypass');
   },
 };
 
@@ -72,7 +91,7 @@ export const predictorAPI = {
   predictFile: async (formData) => {
     // If formData does not have cross_check, we append it.
     // In React code, we'll append the value of crossCheck toggle directly before calling.
-    const res = await API.post('/predict-file', formData, {
+    const res = await API.post('/predict/bulk', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },

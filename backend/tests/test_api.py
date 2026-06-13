@@ -48,14 +48,13 @@ def test_model_info_endpoint_authorized():
     assert "model_type" in data
 
 
-@patch("backend.app.api.routes.predictor_service")
-def test_predict_endpoint(mock_pred, monkeypatch):
+@patch("backend.app.api.prediction.bug_classifier")
+def test_predict_endpoint(mock_classifier):
     """Tests POST /api/predict endpoint with valid payload"""
     # Configure mock prediction return value
-    mock_pred.predict.return_value = (
+    mock_classifier.predict_priority.return_value = (
         {
             'priority': 'High',
-            'priority_score': 2.0,
             'confidence': 0.88,
             'probabilities': {'Low': 0.02, 'Medium': 0.10, 'High': 0.88, 'Critical': 0.00}
         },
@@ -63,10 +62,9 @@ def test_predict_endpoint(mock_pred, monkeypatch):
     )
     
     # Configure mock explanation return value
-    mock_pred.get_explanation.return_value = {
-        'reasoning': 'Mocked reasoning (Confidence: 88.0%)',
-        'shap_impacts': [{'feature': 'Severity', 'impact': 0.5}]
-    }
+    mock_classifier.get_shap_explanation.return_value = [
+        {'feature': 'Severity', 'impact': 0.5}
+    ]
 
     payload = {
         "title": "Database login failing frequently",

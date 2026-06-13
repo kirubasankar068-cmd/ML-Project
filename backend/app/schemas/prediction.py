@@ -62,6 +62,32 @@ class PredictionResponse(BaseModel):
     estimated_fix_time: Optional[str] = "1 day"
     affected_modules: List[str] = []
     timestamp: datetime = Field(default_factory=datetime.utcnow)
+    
+    # Detailed analysis fields
+    category: Optional[str] = None
+    rootCause: Optional[str] = None
+    impact: Optional[str] = None
+    solution: Optional[str] = None
+    recommendation_list: List[str] = []
+    prevention: List[str] = []
+
+
+
+class FlatPredictionItem(BaseModel):
+    id: Optional[int] = None
+    bug_id: str
+    title: str
+    priority: str
+    confidence: float
+    category: str
+    rootCause: str
+    impact: str
+    solution: str
+    recommendation: List[str]
+    prevention: List[str]
+    severity: str
+    component: str
+    timestamp: datetime
 
 
 class BatchPredictionRequest(BaseModel):
@@ -72,8 +98,10 @@ class BatchPredictionResponse(BaseModel):
     total: int
     processed: int
     failed: int
-    predictions: List[PredictionResponse]
+    predictions: Optional[List[FlatPredictionItem]] = None
+    file_id: Optional[str] = None
     timestamp: datetime = Field(default_factory=datetime.utcnow)
+
 
 
 class PredictionReviewAction(BaseModel):
@@ -99,10 +127,12 @@ class ModelInfoResponse(BaseModel):
 
 class HealthResponse(BaseModel):
     status: str
-    model_loaded: bool
-    db_operational: bool
-    api_version: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    database: Optional[str] = None
+    model_loaded: Optional[bool] = True
+    db_operational: Optional[bool] = True
+    mongodb_operational: Optional[bool] = None
+    api_version: Optional[str] = "1.0.0"
+    timestamp: Optional[datetime] = Field(default_factory=datetime.utcnow)
 
 
 class UserLoginRequest(BaseModel):
@@ -117,6 +147,17 @@ class UserLoginResponse(BaseModel):
     username: str
 
 
+class UserRegisterRequest(BaseModel):
+    username: str = Field(..., min_length=3, max_length=50)
+    password: str = Field(..., min_length=6, max_length=100)
+    role: Optional[str] = "developer"
+
+
+class GoogleLoginRequest(BaseModel):
+    credential: str
+    client_id: Optional[str] = None
+
+
 class DashboardStatsResponse(BaseModel):
     total_predictions: int
     critical_bugs: int
@@ -126,3 +167,20 @@ class DashboardStatsResponse(BaseModel):
     avg_confidence: float
     needs_review_count: int
     accuracy_trend: List[Dict[str, Any]] = []
+
+
+class PredictionHistoryRecord(BaseModel):
+    id: Optional[int] = None
+    bug_id: Optional[str] = None
+    title: Optional[str] = None
+    severity: Optional[str] = None
+    component: Optional[str] = None
+    predicted_priority: Optional[str] = None
+    confidence: Optional[float] = None
+    recommendation: Optional[str] = None
+    timestamp: Optional[str] = None
+
+
+class PredictionHistoryResponse(BaseModel):
+    total: int
+    history: List[PredictionHistoryRecord] = []

@@ -45,7 +45,7 @@ class ModelService:
         try:
             import pandas as pd
             # Load reference training data
-            ref_path = "ml_pipeline/data/processed/X_train.csv"
+            ref_path = "backend/ml_pipeline/data/processed/X_train.csv"
             if not os.path.exists(ref_path):
                 # Fallback to creating a dummy reference dataset
                 reference = pd.DataFrame(np.random.randn(100, 5), columns=[f"feat_{i}" for i in range(5)])
@@ -158,7 +158,7 @@ class ModelService:
             
     def _execute_dvc_hook(self):
         """Mock DVC command hook tracking updated datasets in Git version control"""
-        logger.info("DVC Hook: dvc add ml_pipeline/data/processed/X_train.csv")
+        logger.info("DVC Hook: dvc add backend/ml_pipeline/data/processed/X_train.csv")
         logger.info("DVC Hook: dvc push to remote storage bucket complete")
         
     def _generate_simulated_drift_report(self) -> Dict[str, Any]:

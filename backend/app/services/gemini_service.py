@@ -5,7 +5,8 @@ import re
 from typing import Dict, Any
 
 try:
-    import google.generativeai as genai
+    from google import genai
+    from google.genai import types as genai_types
     HAS_GEMINI = True
 except ImportError:
     HAS_GEMINI = False
@@ -21,18 +22,18 @@ class GeminiService:
         self.api_key = settings.GEMINI_API_KEY or settings.GOOGLE_API_KEY
         self.model_name = settings.GEMINI_MODEL or "gemini-1.5-flash"
         self.enabled = False
+        self._client = None
         
         if HAS_GEMINI and self.api_key:
             try:
-                genai.configure(api_key=self.api_key)
-                self._model = genai.GenerativeModel(self.model_name)
+                self._client = genai.Client(api_key=self.api_key)
                 self.enabled = True
                 logger.info(f"Gemini API configured successfully with model {self.model_name}")
             except Exception as e:
                 logger.error(f"Failed to configure Gemini API: {e}")
         else:
             if not HAS_GEMINI:
-                logger.warning("google-generativeai is not installed in Python environment.")
+                logger.warning("google-genai is not installed in Python environment.")
             if not self.api_key:
                 logger.warning("No GOOGLE_API_KEY or GEMINI_API_KEY environment variable detected.")
             logger.info("Gemini Service will operate in offline heuristic mode.")
@@ -77,7 +78,7 @@ class GeminiService:
         """
         
         try:
-            response = self._model.generate_content(prompt)
+            response = self._client.models.generate_content(model=self.model_name, contents=prompt)
             raw_text = response.text.strip()
             
             # Clean up markdown formatting if the model still generated it
@@ -112,6 +113,30 @@ class GeminiService:
             component="Frontend/UI"
         )
         
+    def analyze_image(self, image_path: str) -> Dict[str, Any]:
+        """Analyze the uploaded image using Gemini multimodal model and return structured response."""
+        if not self.enabled:
+            logger.warning("Gemini multimodal disabled; falling back to heuristic analysis.")
+            return {}
+        try:
+            with open(image_path, "rb") as f:
+                image_bytes = f.read()
+            image_part = genai_types.Part.from_bytes(data=image_bytes, mime_type="image/png")
+            response = self._client.models.generate_content(
+                model=self.model_name,
+                contents=[image_part]
+            )
+            raw_text = response.text.strip()
+            if raw_text.startswith("```"):
+                raw_text = re.sub(r"^```(?:json)?\n", "", raw_text)
+                raw_text = re.sub(r"\n```$", "", raw_text)
+                raw_text = raw_text.strip()
+            data = json.loads(raw_text)
+            return data
+        except Exception as e:
+            logger.error(f"Gemini image analysis failed: {e}")
+            return {}
+    
     def _run_heuristic_fallback(self, title: str, description: str, severity: str, component: str) -> Dict[str, Any]:
         """Offline rule-based fallback generating mock structural JSON predictions"""
         text = (title + " " + description).lower()

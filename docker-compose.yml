@@ -45,7 +45,7 @@ services:
     ports:
       - "9090:9090"
     volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./backend/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
     depends_on:
       - backend
     restart: always

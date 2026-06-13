@@ -237,15 +237,44 @@
                                 </div>
 
                                 <div class="form-group full-width">
-                                    <label>Bug Screenshot (Optional)</label>
+                                    <label>Bug Screenshot / Image Analysis <span class="img-optional-badge">Optional but Enhances Accuracy</span></label>
+                                    <div class="img-upload-toolbar">
+                                        <button type="button" class="btn btn-secondary btn-icon-text" id="btn-capture-screenshot">
+                                            <i class="fa-solid fa-camera-retro"></i>
+                                            <span>Capture Screenshot</span>
+                                        </button>
+                                        <div class="img-mode-toggle" id="img-mode-toggle">
+                                            <button type="button" class="img-mode-btn active" data-mode="analyze" id="mode-analyze">
+                                                <i class="fa-solid fa-magnifying-glass-chart"></i> Analyze Image
+                                            </button>
+                                            <button type="button" class="img-mode-btn" data-mode="attach" id="mode-attach">
+                                                <i class="fa-solid fa-paperclip"></i> Attach Only
+                                            </button>
+                                        </div>
+                                    </div>
                                     <div class="drag-drop-area" id="image-drag-area">
                                         <input type="file" id="image-upload" accept="image/*" class="file-input-hidden">
                                         <i class="fa-solid fa-cloud-arrow-up drag-icon"></i>
-                                        <p class="drag-text">Drag and drop screenshot here, or <span>browse files</span></p>
+                                        <p class="drag-text">Drag & drop screenshot, <span>browse files</span>, or capture above</p>
+                                        <p class="drag-hint">JPG, PNG, WEBP up to 10MB — image will be analyzed for bug severity signals</p>
                                         <div class="upload-preview" id="image-preview-container" style="display: none;">
                                             <img id="image-preview" src="#" alt="Screenshot preview">
                                             <button type="button" class="btn-remove-file" id="btn-remove-img"><i class="fa-solid fa-xmark"></i></button>
+                                            <div class="img-analyzing-overlay" id="img-analyzing-overlay" style="display:none;">
+                                                <i class="fa-solid fa-circle-notch fa-spin"></i>
+                                                <span>Analyzing image...</span>
+                                            </div>
                                         </div>
+                                    </div>
+                                    <!-- Image Analysis Quick Preview -->
+                                    <div class="img-analysis-preview" id="img-analysis-preview" style="display:none;">
+                                        <div class="img-analysis-header">
+                                            <i class="fa-solid fa-wand-sparkles"></i>
+                                            <span>Image Analysis Results</span>
+                                            <span class="img-analysis-badge" id="img-analysis-severity-badge">Detecting...</span>
+                                        </div>
+                                        <div class="img-signal-tags" id="img-signal-tags"></div>
+                                        <div class="img-analysis-insight" id="img-analysis-insight"></div>
                                     </div>
                                 </div>
 
@@ -311,9 +340,34 @@
                                 </div>
 
                                 <div class="screenshot-attached-box" id="result-screenshot-attached" style="display: none;">
-                                    <h3>Uploaded Bug Screenshot</h3>
+                                    <h3><i class="fa-solid fa-image"></i> Attached Screenshot</h3>
                                     <div class="result-screenshot-wrapper">
                                         <img id="result-screenshot-img" src="#" alt="Uploaded bug screenshot">
+                                    </div>
+                                </div>
+
+                                <!-- Image Analysis Deep Dive Panel -->
+                                <div class="img-analysis-result-panel" id="img-analysis-result-panel" style="display: none;">
+                                    <div class="img-analysis-result-header">
+                                        <i class="fa-solid fa-magnifying-glass-chart"></i>
+                                        <div>
+                                            <h3>Visual Image Analysis</h3>
+                                            <p>Signals extracted from screenshot to enhance priority accuracy</p>
+                                        </div>
+                                        <span class="img-result-grade" id="img-result-grade">--</span>
+                                    </div>
+                                    <div class="img-analysis-metrics" id="img-analysis-metrics">
+                                        <!-- Dynamically populated -->
+                                    </div>
+                                    <div class="img-detected-signals" id="img-detected-signals">
+                                        <!-- Dynamically populated -->
+                                    </div>
+                                    <div class="img-contribution-bar-wrap">
+                                        <span class="img-contribution-label">Image Contribution to Final Score</span>
+                                        <div class="img-contribution-bar-bg">
+                                            <div class="img-contribution-bar-fill" id="img-contribution-bar"></div>
+                                        </div>
+                                        <span class="img-contribution-pct" id="img-contribution-pct">0%</span>
                                     </div>
                                 </div>
                             </div>

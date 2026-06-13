@@ -106,7 +106,9 @@ print(f"F1-Score: {f1:.4f}")
 # ============================================================
 # Save model
 # ============================================================
-model_path = "backend/app/models/optimized_lightgbm_model.pkl"
+import os
+script_dir = os.path.dirname(os.path.abspath(__file__))
+model_path = os.path.abspath(os.path.join(script_dir, "..", "app", "models", "optimized_lightgbm_model.pkl"))
 with open(model_path, "wb") as f:
     pickle.dump(model, f, protocol=4)  # Protocol 4 for broader compatibility
 print(f"\nModel saved to {model_path}")

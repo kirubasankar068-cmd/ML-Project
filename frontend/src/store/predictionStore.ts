@@ -25,7 +25,30 @@ interface StoreState {
 const loadStoredPredictions = (): (PredictionResult & { input: BugInput })[] => {
   try {
     const data = localStorage.getItem('smart_bug_predictions');
-    return data ? JSON.parse(data) : [];
+    const parsed = data ? JSON.parse(data) : [];
+    return parsed.map((p: any) => {
+      const conf = p.confidence_score ?? p.prediction?.confidence ?? 0.8;
+      const pct = conf * 100;
+      let priority = p.priority_label ?? p.prediction?.priority ?? 'Medium';
+      if (pct >= 90) priority = 'Critical';
+      else if (pct >= 80) priority = 'High';
+      else if (pct >= 70) priority = 'Medium';
+      else priority = 'Low';
+
+      const updated = {
+        ...p,
+        priority_label: priority,
+        confidence_score: conf
+      };
+      if (updated.prediction) {
+        updated.prediction = {
+          ...updated.prediction,
+          priority: priority,
+          confidence: conf
+        };
+      }
+      return updated;
+    });
   } catch (e) {
     console.error('Failed to parse predictions from localStorage:', e);
     return [];

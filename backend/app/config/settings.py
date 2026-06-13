@@ -3,6 +3,7 @@ Settings Configuration Module
 """
 
 import os
+from pathlib import Path
 from typing import List
 from pydantic import Field
 
@@ -13,10 +14,14 @@ except ImportError:
     from pydantic import BaseModel as BaseSettings
     HAS_PYDANTIC_SETTINGS = False
 
+# Resolve .env from project root: settings.py -> config/ -> app/ -> backend/ -> project_root/
+_PROJECT_ROOT = Path(__file__).resolve().parents[3]
+_ENV_FILE = _PROJECT_ROOT / ".env"
+
 if HAS_PYDANTIC_SETTINGS:
     class Settings(BaseSettings):
         model_config = SettingsConfigDict(
-            env_file=".env",
+            env_file=str(_ENV_FILE),
             env_file_encoding="utf-8",
             extra="ignore"
         )
@@ -56,11 +61,16 @@ if HAS_PYDANTIC_SETTINGS:
         
         # Database Settings
         DATABASE_URL: str = Field(default="sqlite:///backend/data/prediction_history.db", validation_alias="DATABASE_URL")
+        MONGO_URI: str = Field(default="", validation_alias="MONGO_URI")
+        MONGO_DB_NAME: str = Field(default="bug_priority_db", validation_alias="MONGO_DB_NAME")
 
         # Gemini Settings
         GEMINI_API_KEY: str = Field(default="", validation_alias="GEMINI_API_KEY")
         GOOGLE_API_KEY: str = Field(default="", validation_alias="GOOGLE_API_KEY")
         GEMINI_MODEL: str = Field(default="gemini-1.5-flash", validation_alias="GEMINI_MODEL")
+        
+        # Google Auth Settings
+        GOOGLE_CLIENT_ID: str = Field(default="", validation_alias="GOOGLE_CLIENT_ID")
 else:
     class Settings:
         def __init__(self):
@@ -79,8 +89,22 @@ else:
             self.MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000")
             self.MLFLOW_EXPERIMENT_NAME = os.getenv("MLFLOW_EXPERIMENT_NAME", "Bug Priority Predictor")
             self.DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///backend/data/prediction_history.db")
+            self.MONGO_URI = os.getenv("MONGO_URI", "")
+            self.MONGO_DB_NAME = os.getenv("MONGO_DB_NAME", "bug_priority_db")
             self.GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", os.getenv("GOOGLE_API_KEY", ""))
             self.GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", self.GEMINI_API_KEY)
             self.GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+            self.GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 
 settings = Settings()
+
+# Post-process paths to ensure they are absolute and relative to project root
+if not os.path.isabs(settings.MODEL_PATH):
+    settings.MODEL_PATH = str(os.path.abspath(_PROJECT_ROOT / settings.MODEL_PATH))
+if not os.path.isabs(settings.FEATURE_ENGINEER_PATH):
+    settings.FEATURE_ENGINEER_PATH = str(os.path.abspath(_PROJECT_ROOT / settings.FEATURE_ENGINEER_PATH))
+if settings.DATABASE_URL.startswith("sqlite:///"):
+    db_path = settings.DATABASE_URL.replace("sqlite:///", "")
+    if not os.path.isabs(db_path):
+        settings.DATABASE_URL = f"sqlite:///{os.path.abspath(_PROJECT_ROOT / db_path)}"
+

@@ -100,18 +100,19 @@ class ImageAnalyzer:
             except Exception as e:
                 logger.error(f"EasyOCR detection failed: {e}")
         
-        # Heuristic Text fallback (if OCR text is still empty, and Gemini is available)
+        # If OCR failed or returned empty, fall back to Gemini multimodal analysis
         if not ocr_text.strip() and gemini_service.enabled:
-            try:
-                # If Gemini is configured, we can pass it details to extract text
-                # For safety, let's run a quick text query or set static mock
-                logger.info("EasyOCR returned empty. Using Gemini verification fallback.")
-                # Since we are sending image, if we had raw byte streaming we could do it,
-                # let's mock the extraction of typical exception strings for test/demo images.
+            logger.info("EasyOCR returned empty. Using Gemini multimodal image analysis.")
+            gemini_result = gemini_service.analyze_image(image_path)
+            if gemini_result:
+                ocr_text = gemini_result.get("ocr_text", "")
+                additional_gemini_data = gemini_result
+            else:
                 ocr_text = self._mock_ocr_from_filename(image_path)
-            except Exception as e:
-                logger.error(f"Gemini OCR extraction failed: {e}")
-                
+                additional_gemini_data = {}
+        else:
+            additional_gemini_data = {}
+
         if not ocr_text.strip():
             ocr_text = self._mock_ocr_from_filename(image_path)
 
@@ -144,6 +145,7 @@ class ImageAnalyzer:
             ui_errors.append("Unidentified UI exception")
             
         # Compile Report
+        # Compile Report
         report = {
             "ocr_text": ocr_text,
             "detected_errors": ui_errors,
@@ -152,7 +154,12 @@ class ImageAnalyzer:
             "dimensions": f"{width}x{height}",
             "confidence_score": 0.85
         }
-        
+
+        # Merge any additional Gemini analysis data
+        if additional_gemini_data:
+            # Avoid overwriting existing keys unless appropriate
+            report.update({k: v for k, v in additional_gemini_data.items() if k not in report})
+
         return report
         
     def _mock_ocr_from_filename(self, image_path: str) -> str:

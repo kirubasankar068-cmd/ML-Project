@@ -17,6 +17,7 @@ from backend.app.utils.logger import setup_logger
 from backend.app.middleware.rate_limiter import rate_limit_middleware
 from backend.app.services.model_loader import model_loader
 from backend.app.database.database import engine, Base
+from backend.app.database.mongodb import mongo_client
 
 # Import REST routes
 from backend.app.api.prediction import router as prediction_router
@@ -48,8 +49,10 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
         "http://localhost:8000",
-        "*",  # Wildcard fallback for other environments
+        "http://127.0.0.1:8000",
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
@@ -72,12 +75,19 @@ app.include_router(monitoring_router, prefix="/api/monitoring")
 async def startup_event():
     """Server startup tasks"""
     logger.info(f"Starting {settings.PROJECT_NAME} version 1.0.0...")
+
     # Initialize the model loader singleton to pre-load model into memory
     model_loader.load()
     if model_loader.model:
         logger.info("ML Predictor is ready for inference requests.")
     else:
         logger.warning("ML Predictor initialized without a loaded model. Calls will run in heuristic mode.")
+
+    # Report MongoDB Atlas connection status
+    if mongo_client.is_active:
+        logger.info(f"MongoDB Atlas connected — database: '{settings.MONGO_DB_NAME}'")
+    else:
+        logger.warning("MongoDB Atlas is NOT connected. Predictions will fall back to SQLite only.")
 
 
 @app.on_event("shutdown")
@@ -108,6 +118,22 @@ async def root():
         "version": "1.0.0",
         "status": "operational",
         "docs": "/docs"
+    }
+
+
+@app.get("/health", tags=["Health"])
+async def health_root():
+    """Root level health check"""
+    from backend.app.services.model_loader import model_loader
+    mongo_ok = mongo_client.is_active
+    return {
+        "status": "healthy" if model_loader.model is not None else "degraded",
+        "model_loaded": model_loader.model is not None,
+        "db_operational": True,
+        "mongo_connected": mongo_ok,
+        "mongo_database": settings.MONGO_DB_NAME if mongo_ok else None,
+        "api_version": "1.0.0",
+        "timestamp": datetime.utcnow().isoformat()
     }
 
 

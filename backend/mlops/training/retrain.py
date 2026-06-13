@@ -15,7 +15,8 @@ except ImportError:
     HAS_MLFLOW = False
 
 # Make sure we can import backend app
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
+
 
 from backend.app.config.settings import settings
 from backend.app.database.database import SessionLocal
@@ -39,7 +40,7 @@ def run_retraining():
         db.close()
         
     # 2. Load primary reference dataset
-    raw_path = "ml_pipeline/data/raw/all_departments_bugs_50k.csv"
+    raw_path = "backend/ml_pipeline/data/raw/all_departments_bugs_50k.csv"
     if not os.path.exists(raw_path):
         logger.warning(f"Reference raw dataset missing at {raw_path}. Generating synthetic bootstrap.")
         # Create a mock bootstrap dataset
@@ -79,9 +80,9 @@ def run_retraining():
     y = df['priority'].map(priority_map).fillna(1).astype(int)
     
     # Save processed dataset
-    os.makedirs("ml_pipeline/data/processed", exist_ok=True)
-    X.to_csv("ml_pipeline/data/processed/X_train.csv", index=False)
-    y.to_csv("ml_pipeline/data/processed/y_train.csv", index=False)
+    os.makedirs("backend/ml_pipeline/data/processed", exist_ok=True)
+    X.to_csv("backend/ml_pipeline/data/processed/X_train.csv", index=False)
+    y.to_csv("backend/ml_pipeline/data/processed/y_train.csv", index=False)
     
     # Save Feature Engineer
     fe.save(settings.FEATURE_ENGINEER_PATH)

@@ -67,7 +67,16 @@ class FeatureEngineer:
         
         # Fit TF-IDF if description exists
         if 'description' in df.columns:
-            self.tfidf_vectorizer.fit(df['description'].astype(str))
+            try:
+                self.tfidf_vectorizer.fit(df['description'].astype(str))
+            except ValueError as e:
+                if "max_df corresponds to < documents than min_df" in str(e):
+                    logger.warning("Small dataset detected for TF-IDF. Falling back to min_df=1, max_df=1.0.")
+                    self.tfidf_vectorizer.min_df = 1
+                    self.tfidf_vectorizer.max_df = 1.0
+                    self.tfidf_vectorizer.fit(df['description'].astype(str))
+                else:
+                    raise e
         
         self.feature_cols = self.get_feature_names()
         self.is_fitted = True

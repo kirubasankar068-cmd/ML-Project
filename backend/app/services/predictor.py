@@ -105,17 +105,30 @@ class BugPriorityPredictorService:
         probabilities = model.predict_proba(features)[0]
         confidence = float(np.max(probabilities))
         
+        # Map priority based on confidence score
+        pct = confidence * 100
+        if pct >= 90:
+            priority = 'Critical'
+            pred_score = 3.0
+        elif pct >= 80:
+            priority = 'High'
+            pred_score = 2.0
+        elif pct >= 70:
+            priority = 'Medium'
+            pred_score = 1.0
+        else:
+            priority = 'Low'
+            pred_score = 0.0
+
         # Build probability map
         prob_dict = {
             self.priority_map[i]: float(prob)
             for i, prob in enumerate(probabilities)
         }
         
-        predicted_priority_label = self.priority_map[int(prediction)]
-        
         result = {
-            'priority': predicted_priority_label,
-            'priority_score': float(prediction),
+            'priority': priority,
+            'priority_score': pred_score,
             'confidence': confidence,
             'probabilities': prob_dict
         }

@@ -1,0 +1,15 @@
+{
+  "name": "smart-bug-priority-predictor-backend",
+  "version": "1.0.0",
+  "description": "FastAPI backend for Smart Bug Priority Predictor",
+  "scripts": {
+    "start": "py -3.14 run.py",
+    "dev": "py -3.14 run.py",
+    "install-deps": "py -3.14 -m pip install -r requirements.txt",
+    "train": "py -3.14 scripts/train_model.py",
+    "test": "py -3.14 -m pytest -o pythonpath=.. tests/ -v"
+  },
+  "dependencies": {
+    "all": "^0.0.0"
+  }
+}

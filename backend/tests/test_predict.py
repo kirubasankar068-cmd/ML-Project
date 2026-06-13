@@ -11,14 +11,14 @@ def mock_predictor_inputs():
     # Mock model predicts class 2 (High)
     mock_model.predict.return_value = np.array([2])
     # Mock probabilities: Low, Medium, High, Critical
-    mock_model.predict_proba.return_value = np.array([[0.05, 0.15, 0.65, 0.15]])
+    mock_model.predict_proba.return_value = np.array([[0.05, 0.10, 0.85, 0.00]])
     
     mock_fe = MagicMock()
     mock_fe.transform.return_value = pd.DataFrame([[1, 2, 3]], columns=['feat1', 'feat2', 'feat3'])
     
     return mock_model, mock_fe
 
-@patch('backend.app.services.model_loader.model_loader')
+@patch('backend.app.services.predictor.model_loader')
 def test_predictor_single_prediction(mock_loader_instance, mock_predictor_inputs):
     """Tests single bug report prediction using mocked model and feature engineer"""
     mock_model, mock_fe = mock_predictor_inputs
@@ -41,11 +41,11 @@ def test_predictor_single_prediction(mock_loader_instance, mock_predictor_inputs
     
     assert result['priority'] == 'High'
     assert result['priority_score'] == 2.0
-    assert result['confidence'] == 0.65
+    assert result['confidence'] == 0.85
     assert 'probabilities' in result
-    assert result['probabilities']['High'] == 0.65
+    assert result['probabilities']['High'] == 0.85
 
-@patch('backend.app.services.model_loader.model_loader')
+@patch('backend.app.services.predictor.model_loader')
 def test_predictor_reasoning(mock_loader_instance):
     """Tests the generated reasoning text for bug priority"""
     mock_loader_instance.model = MagicMock()
