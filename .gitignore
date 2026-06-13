@@ -1,3 +1,7 @@
+# Model binaries
+*.pkl
+*.pickle
+
 # Python
 __pycache__/
 *.py[cod]
