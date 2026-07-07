@@ -137,8 +137,19 @@ class GeminiService:
             logger.error(f"Gemini image analysis failed: {e}")
             return {}
     
-    def _run_heuristic_fallback(self, title: str, description: str, severity: str, component: str) -> Dict[str, Any]:
+    def _run_heuristic_fallback(self, arg1: str, arg2: str, arg3: str = None, arg4: str = None) -> Dict[str, Any]:
         """Offline rule-based fallback generating mock structural JSON predictions"""
+        if arg3 is None and arg4 is None:
+            severity = arg1
+            component = arg2
+            title = ""
+            description = ""
+        else:
+            title = arg1
+            description = arg2
+            severity = arg3
+            component = arg4
+            
         text = (title + " " + description).lower()
         severity = severity.lower()
         

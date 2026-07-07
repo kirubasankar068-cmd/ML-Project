@@ -219,7 +219,43 @@ class BugPriorityPredictorService:
             'reasoning': reasoning_str,
             'shap_impacts': shap_impacts
         }
+
+    def _run_heuristic_prediction(self, bug_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Simple rule-based fallback when model is missing"""
+        severity = bug_data.get('severity', 'medium').lower()
+        users = bug_data.get('affected_users', 1)
         
+        if severity == 'critical' or users > 500:
+            confidence = 0.93  # range 90-100 -> Critical
+            priority = 'Critical'
+            score = 3.0
+        elif severity == 'high' or users > 100:
+            confidence = 0.85  # range 80-90 -> High
+            priority = 'High'
+            score = 2.0
+        elif severity == 'medium' or users > 10:
+            confidence = 0.75  # range 70-80 -> Medium
+            priority = 'Medium'
+            score = 1.0
+        else:
+            confidence = 0.65  # range 60-70 -> Low
+            priority = 'Low'
+            score = 0.0
+            
+        probs = {'Low': 0.0, 'Medium': 0.0, 'High': 0.0, 'Critical': 0.0}
+        probs[priority] = confidence
+        rem = 1.0 - confidence
+        others = [k for k in probs.keys() if k != priority]
+        for o in others:
+            probs[o] = float(f"{rem / len(others):.4f}")
+            
+        return {
+            'priority': priority,
+            'priority_score': score,
+            'confidence': confidence,
+            'probabilities': probs
+        }
+
     def _generate_fallback_shap(self, features_df: pd.DataFrame, predicted_idx: int) -> List[Dict[str, Any]]:
         """Generates fallback explainability when shap package is unavailable"""
         model = self._get_active_model()

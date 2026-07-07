@@ -85,8 +85,13 @@ class BugClassifierService:
             
     def get_shap_explanation(self, bug_data: Dict[str, Any], prediction_result: Dict[str, Any], features_df: pd.DataFrame) -> List[Dict[str, Any]]:
         """Generates SHAP explainability metrics for feature importances"""
-        priority = prediction_result['priority']
-        predicted_idx = self.priority_values[priority]
+        if not prediction_result:
+            prediction_result = {'priority': 'Low', 'confidence': 0.0}
+        if features_df is None or (isinstance(features_df, pd.DataFrame) and features_df.empty):
+            features_df = self._fallback_manual_features(bug_data or {})
+            
+        priority = prediction_result.get('priority', 'Low')
+        predicted_idx = self.priority_values.get(priority, 0)
         model = model_loader.model
         
         if model is None:

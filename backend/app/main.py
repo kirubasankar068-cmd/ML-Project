@@ -23,6 +23,9 @@ from backend.app.database.mongodb import mongo_client
 from backend.app.api.prediction import router as prediction_router
 from backend.app.api.analytics import router as analytics_router
 from backend.app.api.monitoring import router as monitoring_router
+from backend.app.services.user_service import router as users_router
+from backend.app.api.retrain import router as retrain_router
+from backend.app.api.prediction_history import router as history_router
 
 logger = setup_logger("main")
 
@@ -65,7 +68,9 @@ app.add_middleware(
 async def apply_rate_limit(request: Request, call_next):
     return await rate_limit_middleware(request, call_next)
 
-# Include API Routers matching clean architecture prefixes
+app.include_router(users_router, prefix="/api")
+app.include_router(retrain_router, prefix="/api")
+app.include_router(history_router, prefix="/api")
 app.include_router(prediction_router, prefix="/api")
 app.include_router(analytics_router, prefix="/api/analytics")
 app.include_router(monitoring_router, prefix="/api/monitoring")

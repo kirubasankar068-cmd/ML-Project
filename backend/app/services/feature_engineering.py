@@ -86,8 +86,7 @@ class FeatureEngineer:
     
     def transform(self, df: pd.DataFrame) -> pd.DataFrame:
         """Transform raw data into features"""
-        if not self.is_fitted:
-            raise ValueError("Fit the pipeline first using fit()")
+        assert self.is_fitted, "Fit the pipeline first using fit()"
         
         df_copy = df.copy()
         
@@ -177,7 +176,7 @@ class FeatureEngineer:
         feature_names = self.tfidf_vectorizer.get_feature_names_out()
         tfidf_df = pd.DataFrame(
             tfidf_matrix.toarray(),
-            columns=[f'tfidf_{name}' for name in feature_names]
+            columns=[f'desc_tfidf_{name}' for name in feature_names]
         )
         
         # Add aggregate text statistics
@@ -208,7 +207,7 @@ class FeatureEngineer:
         
         # TF-IDF features
         feature_names = self.tfidf_vectorizer.get_feature_names_out()
-        features.extend([f'tfidf_{name}' for name in feature_names])
+        features.extend([f'desc_tfidf_{name}' for name in feature_names])
         features.extend(['tfidf_max', 'tfidf_mean', 'tfidf_sum'])
         
         return features

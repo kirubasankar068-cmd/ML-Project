@@ -91,7 +91,7 @@ class FlatPredictionItem(BaseModel):
 
 
 class BatchPredictionRequest(BaseModel):
-    bugs: List[BugReportRequest]
+    bugs: List[Dict[str, Any]]
 
 
 class BatchPredictionResponse(BaseModel):

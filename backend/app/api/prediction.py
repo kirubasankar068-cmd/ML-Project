@@ -29,6 +29,8 @@ from backend.app.config.settings import settings
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 from backend.app.database.mongodb import mongo_client
+from backend.app.utils.auth_utils import verify_password
+
 
 logger = setup_logger("api_prediction")
 router = APIRouter()
@@ -169,7 +171,7 @@ async def login(payload: UserLoginRequest, db: Session = Depends(get_db)):
                 detail="Incorrect username or password"
             )
             
-    if user.password_hash != password:
+    if not verify_password(password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password"
@@ -948,6 +950,10 @@ async def predict_bulk(
 @router.post("/predict-file", response_model=BatchPredictionResponse, tags=["Predictions"])
 async def predict_file(file: UploadFile = File(...), cross_check: bool = Form(True), current_user: dict = Depends(get_optional_user), db: Session = Depends(get_db)):
     """Processes CSV, XLSX, JSON, LOG, TXT files, predicts priorities, saves predictions under a unique file_id, and returns progress metadata along with the predictions"""
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in [".csv", ".xlsx", ".xls"]:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unsupported file format")
+        
     file_id = uuid4().hex[:12]
     saved_path = os.path.join(UPLOAD_DIR, f"{file_id}_{file.filename}")
     
@@ -1127,14 +1133,17 @@ async def predict_file(file: UploadFile = File(...), cross_check: bool = Form(Tr
 async def batch_predict(payload: BatchPredictionRequest, current_user: dict = Depends(get_optional_user), db: Session = Depends(get_db)):
     """Predicts priority levels for up to 1000 bugs in batch via JSON, saves them under a generated file_id and returns predictions list"""
     bugs = payload.bugs
+    if len(bugs) > 1000:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Batch size exceeds maximum limit of 1000 reports")
     file_id = uuid4().hex[:12]
     
     predictions_to_save = []
     processed = 0
     failed = 0
     
-    for idx, item in enumerate(bugs):
+    for idx, bug_dict in enumerate(bugs):
         try:
+            item = BugReportRequest(**bug_dict)
             details = generate_bug_details(item.title, item.description, item.severity, item.component)
             
             local_priority = details["priority"]
@@ -1178,13 +1187,14 @@ async def batch_predict(payload: BatchPredictionRequest, current_user: dict = De
             predictions_to_save.append(pred_record)
             processed += 1
         except Exception as e:
-            logger.warning(f"Failed to process batch item '{item.title}': {e}")
+            title = bug_dict.get('title') if isinstance(bug_dict, dict) else None
+            logger.warning(f"Failed to process batch item '{title}': {e}")
             bug_id = f"BUG-FAIL-{uuid4().hex[:6].upper()}-{idx}"
             pred_record = Prediction(
                 bug_id=bug_id,
-                title=item.title or f"Failed Bug #{idx + 1}",
-                severity=item.severity or "medium",
-                component=item.component or "General",
+                title=title or f"Failed Bug #{idx + 1}",
+                severity=bug_dict.get('severity') if isinstance(bug_dict, dict) and bug_dict.get('severity') in ['low', 'medium', 'high', 'critical'] else 'medium',
+                component=bug_dict.get('component') if isinstance(bug_dict, dict) else 'General',
                 predicted_priority="Low",
                 confidence=0.0,
                 local_model_priority=None,
