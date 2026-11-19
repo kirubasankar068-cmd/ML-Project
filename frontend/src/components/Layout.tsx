@@ -16,6 +16,7 @@ import {
   Trash2,
   HelpCircle,
   RefreshCw,
+  Sparkles,
   X
 } from 'lucide-react';
 import { api } from '../lib/api';
@@ -48,6 +49,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     { name: 'Dashboard Telemetry', desc: 'Real-time model stats & metrics', path: '/', icon: LayoutDashboard },
     { name: 'Single Predictor', desc: 'Classify single bug reports & fix priority', path: '/prediction', icon: Zap },
     { name: 'Bulk Bug Predictor', desc: 'Batch upload CSV & priority backlog', path: '/bulk-predict', icon: ListTodo },
+    { name: 'Solution Dashboard', desc: 'Multi-modal AI file/photo bug analyzer & voice solution engine', path: '/solution-dashboard', icon: Sparkles },
     { name: 'Analytics Charts', desc: 'Smoothing charts & departments distribution', path: '/analytics', icon: BarChart2 },
     { name: 'System Monitoring', desc: 'API health check & operational status', path: '/monitoring', icon: Activity },
     { name: 'Settings & Calibrations', desc: 'Calibrate model configurations', path: '/settings', icon: Settings },
@@ -103,6 +105,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
     { name: 'Predictor', path: '/prediction', icon: Zap },
     { name: 'Bulk Predict', path: '/bulk-predict', icon: ListTodo },
+    { name: 'Solution Dashboard', path: '/solution-dashboard', icon: Sparkles },
     { name: 'Analytics', path: '/analytics', icon: BarChart2 },
     { name: 'Monitoring', path: '/monitoring', icon: Activity },
     { name: 'Settings', path: '/settings', icon: Settings },
@@ -163,7 +166,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           {/* Welcome greeting */}
           <div>
             <h2 className="text-xl font-bold tracking-tight text-slate-950 leading-none">
-              Smart Bug Priority Predictor
+              Smart Bug Analyzer
             </h2>
             <p className="text-xs text-slate-500 font-semibold mt-1">Enterprise MLOps console controls</p>
           </div>

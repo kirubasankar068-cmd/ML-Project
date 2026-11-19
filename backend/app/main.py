@@ -26,8 +26,10 @@ from backend.app.api.monitoring import router as monitoring_router
 from backend.app.services.user_service import router as users_router
 from backend.app.api.retrain import router as retrain_router
 from backend.app.api.prediction_history import router as history_router
+from backend.app.api.ai_analyzer import router as ai_analyzer_router
 
 logger = setup_logger("main")
+
 
 # Initialize database schema tables on module load
 try:
@@ -72,6 +74,7 @@ app.include_router(users_router, prefix="/api")
 app.include_router(retrain_router, prefix="/api")
 app.include_router(history_router, prefix="/api")
 app.include_router(prediction_router, prefix="/api")
+app.include_router(ai_analyzer_router, prefix="/api")
 app.include_router(analytics_router, prefix="/api/analytics")
 app.include_router(monitoring_router, prefix="/api/monitoring")
 

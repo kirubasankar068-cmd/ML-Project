@@ -26,7 +26,7 @@ if HAS_PYDANTIC_SETTINGS:
             extra="ignore"
         )
         
-        PROJECT_NAME: str = "Smart Bug Priority Predictor"
+        PROJECT_NAME: str = "Smart Bug Analyzer"
         API_VERSION: str = "v1"
         DEBUG: bool = False
         
@@ -74,7 +74,7 @@ if HAS_PYDANTIC_SETTINGS:
 else:
     class Settings:
         def __init__(self):
-            self.PROJECT_NAME = "Smart Bug Priority Predictor"
+            self.PROJECT_NAME = "Smart Bug Analyzer"
             self.API_VERSION = "v1"
             self.DEBUG = os.getenv("DEBUG", "False").lower() in ("true", "1", "t")
             self.PORT = int(os.getenv("PORT", "8000"))

@@ -17,9 +17,11 @@ from backend.app.schemas.prediction import (
     PredictionExplanation, SHAPFeatureImpact, UserLoginRequest, UserLoginResponse,
     PredictionReviewAction, BatchPredictionResponse, BatchPredictionRequest,
     UserRegisterRequest, GoogleLoginRequest, HealthResponse, ModelInfoResponse,
-    FlatPredictionItem
+    FlatPredictionItem, FeedbackRequest
 )
+from backend.app.services.feedback_logger import feedback_logger
 from backend.app.services.bug_classifier import bug_classifier
+
 from backend.app.services.gemini_service import gemini_service
 from backend.app.services.image_analyzer import image_analyzer
 from backend.app.services.file_processor import file_processor
@@ -32,8 +34,143 @@ from backend.app.database.mongodb import mongo_client
 from backend.app.utils.auth_utils import verify_password
 
 
+from backend.app.services.smart_bug_priority import train_model, predict_bug, analyze_bug, scan_file, scan_screenshot
+from backend.app.utils.security import validate_batch_upload_limits, validate_file_security
+
 logger = setup_logger("api_prediction")
 router = APIRouter()
+
+
+@router.post("/dataset/train", tags=["Dataset Actions"])
+async def upload_dataset_and_train(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Uploads a dataset file (CSV, Excel), validates it, removes data leakage,
+    preprocesses features, trains SmartBugPriority model, evaluates it,
+    saves artifacts, and promotes it to active production.
+    """
+    try:
+        contents = await file.read()
+        res = train_model(contents)
+        return {
+            "status": "success",
+            "message": "Dataset uploaded and trained successfully.",
+            "result": res
+        }
+    except Exception as e:
+        logger.error(f"Dataset upload & training failed: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Dataset training failed: {str(e)}"
+        )
+
+
+@router.post("/scan-file-preview", tags=["File Actions"])
+async def scan_file_preview(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_optional_user)
+):
+    """Previews dataset column detection and error log text extraction."""
+    try:
+        contents = await file.read()
+        res = scan_file(contents, file.filename)
+        detected_columns = []
+        if res.get("dataset_records") and len(res["dataset_records"]) > 0:
+            detected_columns = list(res["dataset_records"][0].keys())
+        res["detected_columns"] = detected_columns
+        return res
+    except Exception as e:
+        logger.error(f"File preview scan failed: {e}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.post("/scan-screenshot-preview", tags=["Image Actions"])
+async def scan_screenshot_preview(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_optional_user)
+):
+    """Previews OCR text extraction and error detection for an uploaded screenshot."""
+    try:
+        contents = await file.read()
+        res = scan_screenshot(contents, file.filename)
+        return res
+    except Exception as e:
+        logger.error(f"Screenshot OCR scan failed: {e}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.post("/analyze-bug", tags=["Bug Analysis"])
+async def analyze_bug_multi_source(
+    summary: str = Form(...),
+    description: str = Form(""),
+    severity: str = Form("medium"),
+    component: str = Form("General"),
+    bug_type: str = Form("Bug"),
+    expected_result: Optional[str] = Form(None),
+    actual_result: Optional[str] = Form(None),
+    steps_to_reproduce: Optional[str] = Form(None),
+    affected_users: int = Form(1),
+    is_reproducible: bool = Form(True),
+    files: List[UploadFile] = File(default=[]),
+    screenshots: List[UploadFile] = File(default=[]),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Combines evidence from 3 sources (Manual Details + Uploaded Files/Logs + Screenshots OCR),
+    predicts priority (HIGH/MEDIUM/LOW/CRITICAL), conducts error analysis, and generates step-by-step solution.
+    """
+    try:
+        file_tuples = []
+        for f in files:
+            if f.filename:
+                fbytes = await f.read()
+                file_tuples.append((f.filename, fbytes))
+
+        screenshot_tuples = []
+        for s in screenshots:
+            if s.filename:
+                sbytes = await s.read()
+                screenshot_tuples.append((s.filename, sbytes))
+
+        # Security check on batch uploads
+        all_uploads = file_tuples + screenshot_tuples
+        if all_uploads:
+            is_valid_batch, err_batch = validate_batch_upload_limits(all_uploads)
+            if not is_valid_batch:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=err_batch)
+
+        bug_details = {
+            "summary": summary,
+            "title": summary,
+            "description": description,
+            "severity": severity,
+            "component": component,
+            "bug_type": bug_type,
+            "expected_result": expected_result,
+            "actual_result": actual_result,
+            "steps_to_reproduce": steps_to_reproduce,
+            "affected_users": affected_users,
+            "is_reproducible": is_reproducible
+        }
+
+        result = analyze_bug(
+            bug_details=bug_details,
+            files=file_tuples,
+            screenshots=screenshot_tuples
+        )
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Multi-source bug analysis failed: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Bug analysis failed: {str(e)}"
+        )
+
+
 
 # Temporary upload storage path
 UPLOAD_DIR = "backend/data/uploads"
@@ -100,7 +237,7 @@ async def get_model_info(current_user: dict = Depends(get_current_user)) -> Mode
     feature_names = fe.get_feature_names() if fe else []
     
     return ModelInfoResponse(
-        app_name="Smart Bug Priority Predictor",
+        app_name="Smart Bug Analyzer",
         version="1.0.0",
         model_type=model_type,
         feature_names=feature_names
@@ -1768,4 +1905,41 @@ async def get_prediction_stats(
         "category_distribution": [{"category": k, "count": v} for k, v in categories.items()],
         "confidence_distribution": [{"range": k, "count": v} for k, v in confidence_dist.items()]
     }
+
+
+@router.post("/predict/feedback", tags=["Feedback System"])
+async def submit_prediction_feedback(
+    payload: FeedbackRequest,
+    current_user: dict = Depends(get_optional_user)
+):
+    """
+    Submit developer confirmation or correction for a bug priority prediction.
+    Stores record in feedback_log.csv for future model retraining.
+    """
+    dev_name = payload.developer_id
+    if current_user and current_user.get("username"):
+        dev_name = current_user["username"]
+
+    res = feedback_logger.log_feedback(
+        prediction_id=payload.prediction_id,
+        corrected_priority=payload.corrected_priority,
+        developer_id=dev_name,
+        notes=payload.notes or "",
+        bug_data=payload.bug_data
+    )
+    return res
+
+
+@router.get("/predict/feedback-log", tags=["Feedback System"])
+async def get_feedback_log(
+    current_user: dict = Depends(get_optional_user)
+):
+    """Returns all recorded developer feedback entries from feedback_log.csv"""
+    df_fb = feedback_logger.get_feedback_df()
+    records = df_fb.to_dict(orient="records") if not df_fb.empty else []
+    return {
+        "total_records": len(records),
+        "feedback_entries": records
+    }
+
 

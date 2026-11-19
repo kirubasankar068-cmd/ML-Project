@@ -99,7 +99,7 @@ async def get_model_info():
             ]
 
     return {
-        "app_name": "Smart Bug Priority Predictor",
+        "app_name": "Smart Bug Analyzer",
         "version": "1.0.0",
         "model_type": "LightGBM Multi-class Classifier (Gradient Boosting)",
         "model_loaded": model is not None,

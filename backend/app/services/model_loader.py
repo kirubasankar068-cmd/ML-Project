@@ -16,11 +16,14 @@ logger = setup_logger("model_loader")
 # Backwards compatibility: Register module redirect so pickle can load FeatureEngineer
 try:
     import backend.app.services.feature_engineering as fe
+    import backend.app.services.smart_bug_priority as sbp
     sys.modules['src.features'] = fe
     sys.modules['src'] = sys.modules['backend.app.services']
+    sys.modules['smart_bug_priority'] = sbp
     logger.info("Registered module redirects for pickling compatibility")
 except Exception as e:
     logger.warning(f"Could not register module redirects: {e}")
+
 
 
 class ModelLoader:

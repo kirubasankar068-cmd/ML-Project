@@ -19,6 +19,8 @@ class MongoDBClient:
         
         # Initialize if URI is configured
         self.uri = settings.MONGO_URI
+        if self.uri and self.uri.startswith("MONGODB_URI="):
+            self.uri = self.uri[len("MONGODB_URI="):]
         self.db_name = settings.MONGO_DB_NAME
         
         if self.uri:
@@ -134,8 +136,18 @@ class MongoDBClient:
         return self.db["model_metrics"] if self.is_active else None
 
     @property
+    def model_versions(self):
+        return self.db["model_versions"] if self.is_active else None
+
+    @property
     def audit_logs(self):
         return self.db["audit_logs"] if self.is_active else None
 
+    @property
+    def model_training_stats(self):
+        return self.db["model_training_stats"] if self.is_active else None
+
 # Singleton client instance
 mongo_client = MongoDBClient()
+
+

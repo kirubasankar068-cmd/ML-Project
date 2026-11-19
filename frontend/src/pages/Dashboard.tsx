@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   Activity,
@@ -11,10 +11,13 @@ import {
   RefreshCw,
   Cpu,
   Bug,
-  X
+  X,
+  Search,
+  Filter,
+  CheckCircle2,
+  Code2
 } from 'lucide-react';
-import { api } from '../lib/api';
-import { queryKeys } from '../lib/queryKeys';
+import { predictorAPI } from '../services/api';
 import { ConfidenceTrend } from '../components/Charts/ConfidenceTrend';
 import { ClassDistribution } from '../components/Charts/ClassDistribution';
 import { PriorityBadge } from '../components/PriorityBadge';
@@ -24,510 +27,366 @@ import { Link } from 'react-router-dom';
 
 export const Dashboard: React.FC = () => {
   const { predictions, getDashboardStats, getDashboardHistory } = usePredictionStore();
-  const [selectedPrediction, setSelectedPrediction] = React.useState<any | null>(null);
-  
+  const [selectedPrediction, setSelectedPrediction] = useState<any | null>(null);
+  const [activeFilter, setActiveFilter] = useState<'ALL' | 'CRITICAL' | 'HIGH' | 'MEDIUM'>('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
 
+  // Fetch real prediction history from backend DB if store is empty
+  const { data: dbHistoryData, isLoading: isLoadingDb } = useQuery({
+    queryKey: ['prediction-history-dashboard'],
+    queryFn: () => predictorAPI.getHistory(100),
+    enabled: predictions.length === 0,
+  });
 
-  // Load stats synchronously from local store
+  // Calculate live stats directly from real analyzed predictions
   const stats = getDashboardStats();
   const history = getDashboardHistory();
 
-  const getRecentTableRows = () => {
+  // Combine store predictions or fallback to database query history
+  const allBugItems = React.useMemo(() => {
     if (predictions && predictions.length > 0) {
-      const PRIORITY_ORDER: Record<string, number> = { Critical: 0, High: 1, Medium: 2, Low: 3 };
-      const sorted = [...predictions].sort((a, b) => {
-        const pA = PRIORITY_ORDER[a.priority_label] ?? 4;
-        const pB = PRIORITY_ORDER[b.priority_label] ?? 4;
-        if (pA !== pB) return pA - pB;
-        return b.confidence_score - a.confidence_score;
-      });
-      return sorted.slice(0, 5).map((p) => ({
+      return predictions.map(p => ({
         id: p.prediction_id,
-        title: p.input.title || p.title || 'Untitled Bug',
-        description: p.input.description || p.description || '',
-        module: p.module || p.input.module,
-        priority: p.priority_label,
-        confidence: p.confidence_score,
+        bug_id: p.prediction_id,
+        title: p.input?.title || p.title || 'Untitled Bug',
+        description: p.input?.description || p.description || '',
+        module: p.input?.module || p.module || 'General',
+        priority: (p.priority_label || p.prediction?.priority || 'MEDIUM').toUpperCase(),
+        confidence: (p.confidence_score ?? p.prediction?.confidence ?? 0.85) * 100,
         time: p.timestamp || new Date().toISOString(),
-        raw: p,
+        raw: p
       }));
     }
 
-    return [
-      {
-        id: '1',
-        title: 'SQL Injection threat at auth endpoint',
-        description: 'Auth service threw severe database parsing anomalies. Payload validation filters failed, allowing unescaped SQL commands. High risk of data breach.',
-        module: 'Auth Service',
-        priority: 'Critical',
-        confidence: 0.96,
-        time: new Date(Date.now() - 660000).toISOString(),
-        raw: {
-          prediction_id: 'BUG-20260612-AUTH-96',
-          priority_label: 'Critical',
-          confidence_score: 0.96,
-          timestamp: new Date(Date.now() - 660000).toISOString(),
-          input: {
-            title: 'SQL Injection threat at auth endpoint',
-            module: 'Auth Service',
-            description: 'Auth service threw severe database parsing anomalies. Payload validation filters failed, allowing unescaped SQL commands. High risk of data breach.',
-            environment: 'production',
-            severity: 'critical',
-            department: 'Engineering'
-          },
-          recommendation: 'IMMEDIATE ACTION REQUIRED (P0): Rotate DB credentials, block access to auth gateway path, and inspect database query logs.',
-          explanation: {
-            reasoning: 'Input parameter containing classic SQL keywords (SELECT, UNION) detected in auth payload.',
-            shap_impacts: [
-              { feature: 'SQL Keyword Count', impact: 0.45 },
-              { feature: 'Request Path Match', impact: 0.32 },
-              { feature: 'Error Log Frequency', impact: 0.15 }
-            ]
-          }
-        }
-      },
-      {
-        id: '2',
-        title: 'Payment checkout flow fails during tokenization',
-        description: 'Stripe tokenization requests timeout intermittently. Payment gateway returns 503 Service Unavailable, preventing user transaction completions.',
-        module: 'Checkout Core',
-        priority: 'High',
-        confidence: 0.88,
-        time: new Date(Date.now() - 1500000).toISOString(),
-        raw: {
-          prediction_id: 'BUG-20260612-CHECK-88',
-          priority_label: 'High',
-          confidence_score: 0.88,
-          timestamp: new Date(Date.now() - 1500000).toISOString(),
-          input: {
-            title: 'Payment checkout flow fails during tokenization',
-            module: 'Checkout Core',
-            description: 'Stripe tokenization requests timeout intermittently. Payment gateway returns 503 Service Unavailable, preventing user transaction completions.',
-            environment: 'production',
-            severity: 'major',
-            department: 'Sales'
-          },
-          recommendation: 'HIGH URGENCY (P1): Re-route token queries to standby gateway, increase connection timeout limits, and check stripe API status dashboard.',
-          explanation: {
-            reasoning: 'Network timeout during transaction validation. Outbound HTTP requests to Stripe failing.',
-            shap_impacts: [
-              { feature: 'Intermittent Timeout Rate', impact: 0.38 },
-              { feature: 'Affected User Count', impact: 0.29 },
-              { feature: 'Failure Code 503', impact: 0.12 }
-            ]
-          }
-        }
-      },
-      {
-        id: '3',
-        title: 'Database proxy connection leakage detected',
-        description: 'Intermittent connection pool leakage observed in database proxy handler. Connection leaks accumulate over 12-hour period causing query lag.',
-        module: 'Database Proxy',
-        priority: 'Medium',
-        confidence: 0.75,
-        time: new Date(Date.now() - 3600000).toISOString(),
-        raw: {
-          prediction_id: 'BUG-20260612-DB-75',
-          priority_label: 'Medium',
-          confidence_score: 0.75,
-          timestamp: new Date(Date.now() - 3600000).toISOString(),
-          input: {
-            title: 'Database proxy connection leakage detected',
-            module: 'Database Proxy',
-            description: 'Intermittent connection pool leakage observed in database proxy handler. Connection leaks accumulate over 12-hour period causing query lag.',
-            environment: 'staging',
-            severity: 'normal',
-            department: 'Engineering'
-          },
-          recommendation: 'MEDIUM URGENCY (P2): Schedule cron task to recycle proxy connections, audit connection closure patterns in code repository, and monitor pool size limits.',
-          explanation: {
-            reasoning: 'Steady decrease in available pool connections over time. Occasional staging environment latency.',
-            shap_impacts: [
-              { feature: 'Active Connection Trend', impact: 0.28 },
-              { feature: 'Leaked Count rate', impact: 0.18 },
-              { feature: 'Latency Delta ms', impact: 0.08 }
-            ]
-          }
-        }
-      },
-      {
-        id: '4',
-        title: 'API Gateway returns deprecated warning header',
-        description: 'Deprecated v1 API calls trigger warning logs. Uptime unaffected, request completes successfully with correct JSON structure.',
-        module: 'API Gateway',
-        priority: 'Low',
-        confidence: 0.64,
-        time: new Date(Date.now() - 7200000).toISOString(),
-        raw: {
-          prediction_id: 'BUG-20260612-GATE-64',
-          priority_label: 'Low',
-          confidence_score: 0.64,
-          timestamp: new Date(Date.now() - 7200000).toISOString(),
-          input: {
-            title: 'API Gateway returns deprecated warning header',
-            module: 'API Gateway',
-            description: 'Deprecated v1 API calls trigger warning logs. Uptime unaffected, request completes successfully with correct JSON structure.',
-            environment: 'development',
-            severity: 'minor',
-            department: 'Product'
-          },
-          recommendation: 'LOW URGENCY (P3): File in sprint backlog to upgrade clients to newer endpoints, remove warning headers from gateway config, and archive old v1 documentation.',
-          explanation: {
-            reasoning: 'Warning triggers on minor client request header mismatches. No performance degradation.',
-            shap_impacts: [
-              { feature: 'Uptime Intact', impact: 0.22 },
-              { feature: 'Response Success Rate', impact: 0.14 }
-            ]
-          }
-        }
-      },
-    ];
-  };
+    if (dbHistoryData && dbHistoryData.history && dbHistoryData.history.length > 0) {
+      return dbHistoryData.history.map((h: any) => ({
+        id: h.bug_id,
+        bug_id: h.bug_id,
+        title: h.title || 'Untitled Bug',
+        description: h.description || '',
+        module: h.component || 'General',
+        priority: (h.predicted_priority || h.priority || 'MEDIUM').toUpperCase(),
+        confidence: (h.confidence || 0.85) * (h.confidence <= 1 ? 100 : 1),
+        time: h.created_at || new Date().toISOString(),
+        raw: h
+      }));
+    }
 
-  const recentItems = getRecentTableRows();
+    return [];
+  }, [predictions, dbHistoryData]);
+
+  // Compute dynamic counts directly from analyzed bugs
+  const dynamicCounts = React.useMemo(() => {
+    let critical = 0;
+    let high = 0;
+    let medium = 0;
+    allBugItems.forEach(item => {
+      const prio = item.priority;
+      if (prio === 'CRITICAL') critical++;
+      else if (prio === 'HIGH') high++;
+      else if (prio === 'MEDIUM' || prio === 'LOW') medium++;
+    });
+    return {
+      total: allBugItems.length,
+      critical,
+      high,
+      medium
+    };
+  }, [allBugItems]);
+
+  // Filter & Search Bug Items
+  const filteredBugs = React.useMemo(() => {
+    return allBugItems.filter(bug => {
+      const matchesFilter = activeFilter === 'ALL' || bug.priority === activeFilter;
+      const matchesSearch = !searchQuery.trim() || 
+        bug.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        bug.bug_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        bug.module.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesFilter && matchesSearch;
+    });
+  }, [allBugItems, activeFilter, searchQuery]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-7xl mx-auto pb-12">
       {/* Dashboard Header */}
-      <div className="bg-white rounded-[2rem] p-5 shadow-xl flex flex-col sm:flex-row justify-between items-center gap-4 select-none border border-transparent">
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-6 shadow-xl text-white flex flex-col md:flex-row justify-between md:items-center gap-4">
         <div>
-          <h2 className="text-sm font-black text-slate-900 tracking-tight">
-            📺 MLOps Control Console
-          </h2>
-          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-1.5">
-            Real-time telemetry, model confidence stats, and recent classifications
+          <div className="flex items-center gap-2 mb-1">
+            <span className="bg-indigo-500/20 text-indigo-300 text-xs px-2.5 py-0.5 rounded-full font-semibold border border-indigo-500/30 flex items-center gap-1">
+              <Activity size={12} className="text-indigo-400" />
+              Dynamic Prediction Console
+            </span>
+            <span className="bg-emerald-500/20 text-emerald-300 text-xs px-2.5 py-0.5 rounded-full font-semibold border border-emerald-500/30">
+              Real Analyzed Telemetry
+            </span>
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight">Smart Bug Analyzer Dashboard</h1>
+          <p className="text-slate-400 text-sm mt-1">
+            Real-time classification counts, dynamic priority lists, and automated rectification solutions.
           </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <Link
+            to="/prediction"
+            className="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow-lg shadow-indigo-600/30 transition-all flex items-center gap-2"
+          >
+            <Zap size={16} />
+            New Bug Analysis
+          </Link>
         </div>
       </div>
 
-      {/* Standard MLOps Console */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Column (Wider - 8/12) */}
-        <div className="lg:col-span-8 space-y-6">
-          
-          {/* Metric Cards Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {/* Card 1: Dark Visa Card style predictions */}
-            <div className="relative bg-slate-950 text-white rounded-[2rem] p-6 shadow-2xl overflow-hidden h-[180px] flex flex-col justify-between select-none border border-slate-900">
-              {/* World Map Dotted Pattern */}
-              <div className="absolute inset-0 opacity-10 pointer-events-none mix-blend-overlay">
-                <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-                  <pattern id="mesh" width="8" height="8" patternUnits="userSpaceOnUse">
-                    <circle cx="2" cy="2" r="1" fill="#fff" />
-                  </pattern>
-                  <rect width="100" height="100" fill="url(#mesh)" />
-                </svg>
-              </div>
-
-              <div className="flex justify-between items-start z-10">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Predictions</span>
-                <Activity size={16} className="text-slate-400" />
-              </div>
-
-              <div className="z-10 mt-4">
-                <span className="text-4xl font-extrabold tracking-tight leading-none">
-                  {(stats?.total_predictions || 0).toLocaleString()}
-                </span>
-                <p className="text-[10px] text-green-400 font-semibold mt-1">
-                  ↑ Local stats synced from storage
-                </p>
-              </div>
-
-              <div className="flex justify-between items-center z-10 border-t border-white/10 pt-3 text-[10px] font-mono text-slate-500">
-                <span>CARD ID: predictor_v1.0</span>
-                <span>ENTERPRISE MLOPS</span>
-              </div>
-            </div>
-
-            {/* Card 2: White Theme Card */}
-            <div className="bg-white text-slate-800 rounded-[2rem] p-6 shadow-xl h-[180px] flex flex-col justify-between select-none border border-transparent">
-              <div className="flex justify-between items-start">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Avg. Confidence</span>
-                <TrendingUp size={16} className="text-blue-500" />
-              </div>
-
-              <div className="mt-4">
-                <span className="text-4xl font-extrabold tracking-tight leading-none text-slate-950">
-                  {formatConfidence(stats?.avg_confidence || 0.85)}
-                </span>
-                <p className="text-[10px] text-slate-400 font-semibold mt-1">
-                  Average confidence interval across last evaluations
-                </p>
-              </div>
-
-              <div className="border-t border-slate-100 pt-3 flex items-center justify-between text-[10px] font-semibold text-slate-500">
-                <span>MODEL CALIBRATED</span>
-                <span className="text-blue-500">OPTIMAL</span>
-              </div>
-            </div>
+      {/* DYNAMIC PRIORITY COUNTS CARDS */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* TOTAL BUGS */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+          <div className="flex justify-between items-start">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Bugs</span>
+            <Bug size={18} className="text-slate-600" />
           </div>
-
-          {/* Quick Action Pills Row */}
-          <div className="flex flex-wrap gap-3 select-none">
-            <Link
-              to="/prediction"
-              className="flex items-center gap-2 px-5 py-2.5 bg-white text-slate-800 text-xs font-bold rounded-full shadow-md hover:bg-slate-50 transition-colors border border-transparent"
-            >
-              <Zap size={14} className="text-blue-500" />
-              <span>Predict Bug</span>
-            </Link>
-
-            <button
-              onClick={() => usePredictionStore.getState().clearStore()}
-              className="flex items-center gap-2 px-5 py-2.5 bg-white text-slate-800 text-xs font-bold rounded-full shadow-md hover:bg-slate-50 transition-colors border border-transparent cursor-pointer"
-            >
-              <Cpu size={14} className="text-red-500" />
-              <span>Clear History</span>
-            </button>
-
-            <Link
-              to="/analytics"
-              className="flex items-center gap-2 px-5 py-2.5 bg-white text-slate-800 text-xs font-bold rounded-full shadow-md hover:bg-slate-50 transition-colors border border-transparent"
-            >
-              <BarChart2 size={14} className="text-green-500" />
-              <span>View Analytics</span>
-            </Link>
-
-            <button className="flex items-center gap-2 px-5 py-2.5 bg-white text-slate-800 text-xs font-bold rounded-full shadow-md hover:bg-slate-50 transition-colors border border-transparent cursor-pointer">
-              <RefreshCw size={14} className="text-amber-500" />
-              <span>Jira Sync</span>
-            </button>
-          </div>
-
-          {/* Main Chart Panel - Confidence Score Trends */}
-          <div className="bg-white rounded-[2rem] p-6 shadow-xl border border-transparent">
-            <div className="flex justify-between items-center mb-6 select-none">
-              <div>
-                <h3 className="text-sm font-bold text-slate-900">Confidence Score Trends</h3>
-                <p className="text-xs text-slate-500 font-semibold mt-0.5">Smoothing confidence distributions of last predictions</p>
-              </div>
-            </div>
-
-            <ConfidenceTrend data={history || { timestamps: ['09:00', '10:00', '11:00'], confidences: [0.85, 0.85, 0.85] }} />
+          <div className="mt-3">
+            <span className="text-3xl font-extrabold text-slate-900">{dynamicCounts.total}</span>
+            <p className="text-[11px] text-slate-400 mt-0.5 font-medium">Combined multi-source records</p>
           </div>
         </div>
 
-        {/* Right Column (Narrower - 4/12) */}
-        <div className="lg:col-span-4">
-          <div className="bg-white rounded-[2rem] p-6 shadow-xl flex flex-col gap-6 min-h-[520px] justify-between border border-transparent">
-            {/* Top Half: Class Distribution Pie donut */}
-            <div>
-              <h3 className="text-sm font-bold text-slate-900 mb-4 select-none">Class Distribution</h3>
-              <ClassDistribution
-                data={
-                  stats || {
-                    critical: 0,
-                    high: 0,
-                    medium: 0,
-                    low: 0,
-                    total_predictions: 0,
-                    avg_confidence: 0.85,
-                    service_status: 'healthy',
-                  }
-                }
-              />
+        {/* CRITICAL BUGS */}
+        <div className="bg-red-50/60 p-5 rounded-2xl border border-red-200 shadow-sm flex flex-col justify-between">
+          <div className="flex justify-between items-start">
+            <span className="text-xs font-bold text-red-800 uppercase tracking-wider">Critical Bugs</span>
+            <span className="h-3 w-3 rounded-full bg-red-500 animate-pulse"></span>
+          </div>
+          <div className="mt-3">
+            <span className="text-3xl font-extrabold text-red-950">{dynamicCounts.critical}</span>
+            <p className="text-[11px] text-red-700 mt-0.5 font-medium">Outages & severe failures</p>
+          </div>
+        </div>
+
+        {/* HIGH BUGS */}
+        <div className="bg-orange-50/60 p-5 rounded-2xl border border-orange-200 shadow-sm flex flex-col justify-between">
+          <div className="flex justify-between items-start">
+            <span className="text-xs font-bold text-orange-800 uppercase tracking-wider">High Bugs</span>
+            <AlertTriangle size={18} className="text-orange-600" />
+          </div>
+          <div className="mt-3">
+            <span className="text-3xl font-extrabold text-orange-950">{dynamicCounts.high}</span>
+            <p className="text-[11px] text-orange-700 mt-0.5 font-medium">Major feature disruptions</p>
+          </div>
+        </div>
+
+        {/* MEDIUM BUGS */}
+        <div className="bg-yellow-50/60 p-5 rounded-2xl border border-yellow-200 shadow-sm flex flex-col justify-between">
+          <div className="flex justify-between items-start">
+            <span className="text-xs font-bold text-yellow-800 uppercase tracking-wider">Medium Bugs</span>
+            <ShieldAlert size={18} className="text-yellow-600" />
+          </div>
+          <div className="mt-3">
+            <span className="text-3xl font-extrabold text-yellow-950">{dynamicCounts.medium}</span>
+            <p className="text-[11px] text-yellow-700 mt-0.5 font-medium">Limited functional issues</p>
+          </div>
+        </div>
+      </div>
+
+      {/* MAIN DASHBOARD SECTION */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        {/* Left Column: Dynamic Bugs List & Filter Tabs (8 Cols) */}
+        <div className="lg:col-span-8 space-y-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+            
+            {/* Header & Controls */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Analyzed Bug Priority Directory</h3>
+                <p className="text-xs text-slate-500">Live priority classifications from trained SmartBugPriority model</p>
+              </div>
+
+              {/* Search input */}
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-2.5 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search bug title, ID, component..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 pr-3 py-1.5 border border-slate-200 rounded-xl text-xs w-64 focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
             </div>
 
-            {/* Bottom Half: Recent Predictions */}
-            <div className="border-t border-slate-100 pt-6">
-              <h3 className="text-sm font-bold text-slate-900 mb-4 select-none">Recent Predictions</h3>
-              <div className="space-y-4">
-                {recentItems.map((item) => (
+            {/* PRIORITY FILTER TABS (All, CRITICAL, HIGH, MEDIUM) */}
+            <div className="flex gap-2">
+              {[
+                { key: 'ALL', label: `All (${dynamicCounts.total})` },
+                { key: 'CRITICAL', label: `CRITICAL (${dynamicCounts.critical})` },
+                { key: 'HIGH', label: `HIGH (${dynamicCounts.high})` },
+                { key: 'MEDIUM', label: `MEDIUM (${dynamicCounts.medium})` },
+              ].map(tab => (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveFilter(tab.key as any)}
+                  className={cn(
+                    "px-3.5 py-1.5 text-xs font-bold rounded-xl transition-all border",
+                    activeFilter === tab.key
+                      ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
+                      : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
+                  )}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* BUGS LIST TABLE / CARDS */}
+            {filteredBugs.length > 0 ? (
+              <div className="space-y-2.5 pt-1">
+                {filteredBugs.map((bug) => (
                   <div
-                    key={item.id}
-                    onClick={() => item.raw && setSelectedPrediction(item.raw)}
-                    className={cn(
-                      "flex items-center justify-between text-xs font-semibold p-2.5 rounded-2xl transition-all border border-transparent",
-                      item.raw ? "hover:bg-slate-50/80 cursor-pointer hover:border-slate-100" : ""
-                    )}
+                    key={bug.id}
+                    onClick={() => setSelectedPrediction(bug.raw)}
+                    className="p-4 rounded-xl border border-slate-200 hover:border-indigo-300 hover:shadow-md transition-all cursor-pointer bg-slate-50/40 flex items-center justify-between gap-4"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center border border-slate-200 shrink-0 text-slate-700">
-                        <Bug size={14} />
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="h-9 w-9 rounded-xl bg-indigo-50 flex items-center justify-center border border-indigo-100 shrink-0">
+                        <Bug size={18} className="text-indigo-600" />
                       </div>
-                      <div className="flex flex-col gap-0.5 max-w-[140px] truncate">
-                        <span className="text-slate-900 truncate">{item.module}</span>
-                        <span className="text-[10px] text-slate-400 font-semibold">
-                          {formatRelativeTime(item.time)}
-                        </span>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-mono font-bold text-indigo-600">{bug.bug_id}</span>
+                          <span className="text-xs text-slate-400">•</span>
+                          <span className="text-xs font-bold text-slate-700">{bug.module}</span>
+                        </div>
+                        <h4 className="text-sm font-semibold text-slate-900 truncate mt-0.5">{bug.title}</h4>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-slate-400 font-bold">{(item.confidence * 100).toFixed(0)}%</span>
-                      <PriorityBadge label={item.priority as any} size="sm" variant="outline" />
+
+                    <div className="flex items-center gap-3 shrink-0">
+                      <div className="text-right hidden sm:block">
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Confidence</span>
+                        <span className="text-xs font-bold text-slate-800">{bug.confidence.toFixed(0)}%</span>
+                      </div>
+                      <span className={cn(
+                        "text-xs font-extrabold px-3 py-1 rounded-lg border uppercase tracking-wider",
+                        bug.priority === 'CRITICAL' && "bg-purple-100 text-purple-900 border-purple-300",
+                        bug.priority === 'HIGH' && "bg-red-100 text-red-800 border-red-300",
+                        bug.priority === 'MEDIUM' && "bg-yellow-100 text-yellow-800 border-yellow-300",
+                        bug.priority === 'LOW' && "bg-green-100 text-green-800 border-green-300",
+                        bug.priority === 'REVIEW REQUIRED' && "bg-amber-100 text-amber-900 border-amber-400"
+                      )}>
+                        {bug.priority}
+                      </span>
                     </div>
                   </div>
                 ))}
               </div>
+            ) : (
+              <div className="p-8 text-center bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                <Bug size={36} className="mx-auto text-slate-400" />
+                <h4 className="text-sm font-bold text-slate-700">No Bugs Found</h4>
+                <p className="text-xs text-slate-500 max-w-xs mx-auto">
+                  No bug predictions match the selected filter category ({activeFilter}).
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Confidence Score Trends Chart */}
+          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
+            <h3 className="text-sm font-bold text-slate-900 mb-1">Confidence Score Trends</h3>
+            <p className="text-xs text-slate-500 mb-4">Historical confidence metrics across latest predictions</p>
+            <ConfidenceTrend data={history || { timestamps: ['09:00', '10:00'], confidences: [0.85, 0.88] }} />
+          </div>
+        </div>
+
+        {/* Right Column: Class Distribution & Quick Actions (4 Cols) */}
+        <div className="lg:col-span-4 space-y-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+            <h3 className="text-sm font-bold text-slate-900">Priority Distribution</h3>
+            <ClassDistribution
+              data={stats || { critical: dynamicCounts.critical, high: dynamicCounts.high, medium: dynamicCounts.medium, low: 0, total_predictions: dynamicCounts.total, avg_confidence: 0.85, service_status: 'healthy' }}
+            />
+          </div>
+
+          <div className="bg-gradient-to-br from-indigo-900 to-slate-900 text-white rounded-2xl p-5 shadow-lg space-y-3">
+            <h3 className="text-sm font-bold flex items-center gap-1.5">
+              <Zap size={16} className="text-indigo-400" />
+              Quick Actions
+            </h3>
+            <p className="text-xs text-indigo-200 leading-relaxed">
+              Run manual multi-source bug analysis or upload bulk datasets to populate the dashboard telemetries.
+            </p>
+            <div className="pt-2 flex flex-col gap-2">
+              <Link
+                to="/prediction"
+                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 px-3 rounded-xl text-xs transition-all text-center"
+              >
+                Analyze Bug Details / Files / Screenshot →
+              </Link>
+              <button
+                onClick={() => usePredictionStore.getState().clearStore()}
+                className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2 px-3 rounded-xl text-xs transition-all text-center border border-slate-700"
+              >
+                Clear Local Telemetry History
+              </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Details Modal overlay */}
+      {/* Details & Rectification Modal */}
       {selectedPrediction && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-100 flex flex-col max-h-[85vh]">
-            {/* Modal Header */}
-            <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-start bg-slate-950 text-white select-none">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-200 flex flex-col max-h-[85vh]">
+            <div className="px-6 py-4 border-b border-slate-800 bg-slate-900 text-white flex justify-between items-center">
               <div>
-                <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest leading-none">Bug Details & Action Plan</span>
-                <h3 className="text-base font-extrabold text-white mt-1">
-                  {selectedPrediction.input?.title || selectedPrediction.title || 'Bug Report Detail'}
+                <span className="text-[10px] text-indigo-400 font-bold uppercase tracking-wider">BUG RECTIFICATION & FIX</span>
+                <h3 className="text-base font-bold text-white mt-0.5">
+                  {selectedPrediction.input?.title || selectedPrediction.title || selectedPrediction.bug_id || 'Bug Detail'}
                 </h3>
               </div>
               <button
                 onClick={() => setSelectedPrediction(null)}
-                className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white cursor-pointer transition-colors"
+                className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white transition-colors"
               >
                 <X size={18} />
               </button>
             </div>
 
-            {/* Modal Body */}
-            <div className="p-6 overflow-y-auto space-y-6">
-              {/* Top Row: Meta parameters */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 select-none">
-                <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 flex flex-col justify-between">
-                  <span className="text-[9px] text-slate-400 font-extrabold uppercase">Component</span>
-                  <span className="text-xs font-extrabold text-slate-800 truncate mt-1">
-                    {selectedPrediction.input?.module || selectedPrediction.component || 'General'}
-                  </span>
+            <div className="p-6 overflow-y-auto space-y-4 text-xs">
+              <div className="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-200">
+                <div>
+                  <span className="text-slate-500 font-bold uppercase text-[10px] block">Predicted Priority</span>
+                  <span className="font-extrabold text-sm text-indigo-600">{selectedPrediction.priority_label || selectedPrediction.priority || 'MEDIUM'}</span>
                 </div>
-                <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 flex flex-col justify-between">
-                  <span className="text-[9px] text-slate-400 font-extrabold uppercase">Environment</span>
-                  <span className="text-xs font-extrabold text-slate-800 capitalize mt-1">
-                    {selectedPrediction.input?.environment || 'Production'}
-                  </span>
+                <div>
+                  <span className="text-slate-500 font-bold uppercase text-[10px] block">Component</span>
+                  <span className="font-bold text-slate-800">{selectedPrediction.input?.module || selectedPrediction.component || 'General'}</span>
                 </div>
-                <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 flex flex-col justify-between">
-                  <span className="text-[9px] text-slate-400 font-extrabold uppercase">Priority Level</span>
-                  <div className="mt-1">
-                    <PriorityBadge label={selectedPrediction.priority_label} size="sm" variant="solid" />
-                  </div>
-                </div>
-                <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 flex flex-col justify-between">
-                  <span className="text-[9px] text-slate-400 font-extrabold uppercase">ML Confidence</span>
-                  <span className="text-xs font-black text-blue-600 mt-1">
-                    {(selectedPrediction.confidence_score * 100).toFixed(1)}%
-                  </span>
+                <div>
+                  <span className="text-slate-500 font-bold uppercase text-[10px] block">Confidence</span>
+                  <span className="font-bold text-slate-800">{((selectedPrediction.confidence_score ?? selectedPrediction.confidence ?? 0.85) * (selectedPrediction.confidence_score <= 1 ? 100 : 1)).toFixed(0)}%</span>
                 </div>
               </div>
 
-              {/* Bug Description */}
-              <div className="space-y-1">
-                <h4 className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Bug Description</h4>
-                <p className="text-xs text-slate-700 font-medium bg-slate-50 p-3.5 rounded-2xl border border-slate-100 leading-relaxed whitespace-pre-wrap">
-                  {selectedPrediction.input?.description || selectedPrediction.description || 'No description available.'}
-                </p>
-              </div>
-
-              {/* Urgency Fix Chart / Visual Rating (Fix First Guide) */}
-              <div className="space-y-2.5">
-                <h4 className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Urgency Fix Guidance</h4>
-                <div className="bg-slate-50 p-4 rounded-3xl border border-slate-100 space-y-3">
-                  <div className="flex justify-between items-center text-xs font-bold">
-                    <span className="text-slate-800">Priority Fix Index</span>
-                    <span className="text-red-500 font-extrabold uppercase">
-                      {selectedPrediction.priority_label === 'Critical' ? '🔴 Fix Immediately (P0)' :
-                       selectedPrediction.priority_label === 'High' ? '🟠 Address Next (P1)' :
-                       selectedPrediction.priority_label === 'Medium' ? '🟡 Schedule in Sprint (P2)' :
-                       '🟢 Low Backlog (P3)'}
-                    </span>
-                  </div>
-
-                  {/* Fix Progress Bar */}
-                  <div className="h-3 w-full bg-slate-200 rounded-full overflow-hidden relative">
-                    <div
-                      className={cn(
-                        "h-full rounded-full transition-all duration-500",
-                        selectedPrediction.priority_label === 'Critical' ? 'bg-gradient-to-r from-red-500 to-rose-600' :
-                        selectedPrediction.priority_label === 'High' ? 'bg-gradient-to-r from-orange-400 to-amber-500' :
-                        selectedPrediction.priority_label === 'Medium' ? 'bg-gradient-to-r from-yellow-400 to-yellow-500' :
-                        'bg-gradient-to-r from-green-400 to-emerald-500'
-                      )}
-                      style={{
-                        width: selectedPrediction.priority_label === 'Critical' ? '100%' :
-                               selectedPrediction.priority_label === 'High' ? '75%' :
-                               selectedPrediction.priority_label === 'Medium' ? '50%' :
-                               '25%'
-                      }}
-                    />
-                  </div>
-
-                  <div className="flex justify-between text-[9px] text-slate-400 font-bold uppercase tracking-wide">
-                    <span>Low Backlog</span>
-                    <span>Medium</span>
-                    <span>High</span>
-                    <span>Fix First</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Recommended Action Plan */}
-              {selectedPrediction.recommendation && (
-                <div className="space-y-1">
-                  <h4 className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Recommended Action Plan</h4>
-                  <div
-                    className={cn(
-                      "border rounded-2xl p-4 text-xs font-semibold leading-relaxed",
-                      selectedPrediction.priority_label.toLowerCase() === 'critical' ? 'border-red-500/10 bg-red-500/5 text-red-700' :
-                      selectedPrediction.priority_label.toLowerCase() === 'high' ? 'border-amber-500/10 bg-amber-500/5 text-amber-700' :
-                      selectedPrediction.priority_label.toLowerCase() === 'medium' ? 'border-blue-500/10 bg-blue-500/5 text-blue-700' :
-                      'border-green-500/10 bg-green-500/5 text-green-700'
-                    )}
-                  >
-                    {selectedPrediction.recommendation}
-                  </div>
+              {selectedPrediction.description && (
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                  <span className="font-bold text-slate-700 uppercase text-[10px] block mb-1">Description</span>
+                  <p className="text-slate-600 leading-relaxed">{selectedPrediction.description}</p>
                 </div>
               )}
 
-              {/* Explanations (SHAP Feature Impacts chart if available) */}
-              {selectedPrediction.explanation?.shap_impacts && selectedPrediction.explanation.shap_impacts.length > 0 ? (
-                <div className="space-y-3">
-                  <h4 className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Feature Impact Drivers</h4>
-                  <div className="space-y-2 bg-slate-50 p-4 rounded-3xl border border-slate-100">
-                    {selectedPrediction.explanation.shap_impacts.slice(0, 4).map((s: any, idx: number) => {
-                      const pct = Math.min(100, Math.abs(s.impact) * 200);
-                      const isPositive = s.impact > 0;
-                      return (
-                        <div key={idx} className="flex items-center gap-2.5 text-xs font-semibold">
-                          <span className="font-mono text-slate-500 w-36 truncate">{s.feature}</span>
-                          <div className="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden">
-                            <div
-                              className={cn(
-                                "h-full rounded-full",
-                                isPositive ? "bg-blue-600" : "bg-slate-400"
-                              )}
-                              style={{ width: `${pct}%` }}
-                            />
-                          </div>
-                          <span className="font-bold text-slate-700 w-12 text-right">
-                            {isPositive ? '+' : ''}{s.impact.toFixed(2)}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : selectedPrediction.explanation?.reasoning ? (
-                <div className="space-y-1">
-                  <h4 className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Classification Reasoning</h4>
-                  <p className="text-xs text-slate-600 leading-relaxed font-semibold bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                    {selectedPrediction.explanation.reasoning}
+              {selectedPrediction.recommendation && (
+                <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-emerald-950">
+                  <span className="font-bold text-emerald-900 uppercase text-[10px] block mb-1 flex items-center gap-1">
+                    <CheckCircle2 size={14} className="text-emerald-600" />
+                    Recommended Fix
+                  </span>
+                  <p className="font-semibold leading-relaxed">
+                    {typeof selectedPrediction.recommendation === 'string' ? selectedPrediction.recommendation : JSON.stringify(selectedPrediction.recommendation)}
                   </p>
                 </div>
-              ) : null}
-            </div>
-
-            {/* Modal Footer */}
-            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end">
-              <button
-                onClick={() => setSelectedPrediction(null)}
-                className="px-5 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-bold hover:opacity-90 transition-opacity cursor-pointer"
-              >
-                Close Details
-              </button>
+              )}
             </div>
           </div>
         </div>

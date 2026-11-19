@@ -126,7 +126,7 @@ export const Login = ({ onLoginSuccess }) => {
         {/* Header Section */}
         <div className="flex flex-col items-center gap-3">
           <div className="bg-white p-1.5 rounded-2xl shadow-lg shadow-blue-500/10 flex items-center justify-center border border-slate-800">
-            <img src={logo} alt="Smart Bug Predictor" className="h-14 w-auto object-contain rounded-xl" />
+            <img src={logo} alt="Smart Bug Analyzer" className="h-14 w-auto object-contain rounded-xl" />
           </div>
           <div className="text-center">
             <h2 className="text-2xl font-black tracking-tight">

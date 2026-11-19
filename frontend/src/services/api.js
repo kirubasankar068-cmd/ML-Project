@@ -106,7 +106,32 @@ export const predictorAPI = {
     });
     return res.data;
   },
+  analyzeBugMultiSource: async (formData) => {
+    const res = await API.post('/analyze-bug', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return res.data;
+  },
+  scanFilePreview: async (formData) => {
+    const res = await API.post('/scan-file-preview', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return res.data;
+  },
+  scanScreenshotPreview: async (formData) => {
+    const res = await API.post('/scan-screenshot-preview', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return res.data;
+  },
   getHistory: async (limit = 50) => {
+
     const res = await API.get(`/prediction-history?limit=${limit}`);
     return res.data;
   },
@@ -118,6 +143,14 @@ export const predictorAPI = {
     const res = await API.post(`/human-review/${bugId}`, {
       approved_priority: approvedPriority,
       reason: reason
+    });
+    return res.data;
+  },
+  verifyPrediction: async (bugId, actualPriority, verifiedBy = 'admin') => {
+    const res = await API.post('/verify', {
+      bug_id: bugId,
+      actual_priority: actualPriority,
+      verified_by: verifiedBy
     });
     return res.data;
   }
@@ -153,24 +186,57 @@ export const monitoringAPI = {
   },
   getLiveStatsWSUrl: () => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    // Fallback if hosting is different
     return `${protocol}//localhost:8000/api/monitoring/live-stats`;
   }
 };
 
 export const systemAPI = {
+  uploadAndTrainDataset: async (formData) => {
+    const res = await API.post('/dataset/train', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return res.data;
+  },
   retrain: async () => {
-    const res = await API.post('/monitoring/retrain');
+    const res = await API.post('/retrain');
     return res.data;
   },
   getRetrainStatus: async () => {
-    const res = await API.get('/monitoring/retrain/status');
+    const res = await API.get('/retrain/status');
     return res.data;
   },
   getModelInfo: async () => {
-    const res = await API.get('/monitoring/model-info');
+    const res = await API.get('/model-info');
     return res.data;
   },
+  getModelVersions: async () => {
+    const res = await API.get('/model-versions');
+    return res.data;
+  },
+  promoteModel: async (version) => {
+    const res = await API.post(`/models/promote/${version}`);
+    return res.data;
+  },
+  rollbackModel: async () => {
+    const res = await API.post('/models/rollback');
+    return res.data;
+  },
+  getTrainingStats: async () => {
+    const res = await API.get('/retrain/stats');
+    return res.data;
+  },
+  updateTrainingSettings: async (settings) => {
+    const res = await API.post('/retrain/settings', settings);
+    return res.data;
+  },
+  trainNow: async () => {
+    const res = await API.post('/retrain/train-now');
+    return res.data;
+  }
 };
 
 export default API;
+
+

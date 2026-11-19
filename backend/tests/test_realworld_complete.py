@@ -723,10 +723,11 @@ class TestGeminiService:
 
     def test_gemini_analyze_bug_offline_fallback(self):
         """Test 71: Verify service returns local rules fallback if Gemini integration is offline"""
-        with patch("backend.app.services.gemini_service.gemini_service.enabled", False):
-            # Trigger fallback
-            res = gemini_service._run_heuristic_fallback("critical", "Auth")
-            assert res["priority"] in ["High", "Critical"]
+        from backend.app.services.gemini_service import GeminiService
+        service = GeminiService()
+        service.enabled = False
+        res = service._run_heuristic_fallback("critical", "Auth")
+        assert res["priority"] in ["High", "Critical"]
 
     def test_gemini_analyze_bug_invalid_json(self, mock_gemini):
         """Test 72: Verify service handles json parsing exceptions gracefully"""
@@ -737,6 +738,7 @@ class TestGeminiService:
 
     def test_gemini_analyze_bug_rate_limit_handled(self, mock_gemini):
         """Test 73: Verify gemini service retries or handles rate limit codes"""
+        mock_gemini.analyze_bug.side_effect = None
         mock_gemini.analyze_bug.return_value = {"priority": "Low", "confidence": 0.5}
         res = mock_gemini.analyze_bug("a", "b", "c", "d")
         assert res["priority"] == "Low"

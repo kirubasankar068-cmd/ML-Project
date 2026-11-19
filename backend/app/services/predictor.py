@@ -10,8 +10,11 @@ from datetime import datetime
 
 from backend.app.services.model_loader import model_loader
 from backend.app.services.feature_engineering import FeatureEngineer
+from backend.app.services.solution_engine import solution_engine
+from backend.app.services.feedback_logger import feedback_logger
 
 logger = logging.getLogger(__name__)
+
 
 
 class BugPriorityPredictorService:
@@ -126,14 +129,28 @@ class BugPriorityPredictorService:
             for i, prob in enumerate(probabilities)
         }
         
+        # Generate step-by-step solution plan from solution_engine
+        bug_category = bug_data.get('category') or bug_data.get('bug_type') or bug_data.get('component') or 'general'
+        plan = solution_engine.get_solution_plan(priority, bug_category)
+
+        # Log prediction for future retraining
+        prediction_id = feedback_logger.log_prediction(
+            bug_data=bug_data,
+            predicted_priority=priority,
+            confidence=confidence
+        )
+
         result = {
+            'prediction_id': prediction_id,
             'priority': priority,
             'priority_score': pred_score,
             'confidence': confidence,
-            'probabilities': prob_dict
+            'probabilities': prob_dict,
+            'solution_plan': plan
         }
         
         return result, features
+
 
     def get_explanation(self, bug_data: Dict[str, Any], prediction_result: Dict[str, Any], features_df: pd.DataFrame) -> Dict[str, Any]:
         """

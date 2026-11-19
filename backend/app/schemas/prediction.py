@@ -184,3 +184,12 @@ class PredictionHistoryRecord(BaseModel):
 class PredictionHistoryResponse(BaseModel):
     total: int
     history: List[PredictionHistoryRecord] = []
+
+
+class FeedbackRequest(BaseModel):
+    prediction_id: str = Field(..., description="ID of prediction being confirmed or corrected")
+    corrected_priority: str = Field(..., description="Confirmed or corrected priority: LOW, MEDIUM, HIGH, CRITICAL")
+    developer_id: Optional[str] = Field(default="dev", description="Developer ID or name")
+    notes: Optional[str] = Field(default="", description="Optional feedback notes")
+    bug_data: Optional[Dict[str, Any]] = Field(default=None, description="Optional bug input features")
+

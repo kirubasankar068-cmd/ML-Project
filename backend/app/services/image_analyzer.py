@@ -91,18 +91,32 @@ class ImageAnalyzer:
             except Exception as e:
                 logger.warning(f"OpenCV preprocessing failed: {e}")
                 
-        # 2. Extract Text using OCR (EasyOCR or Heuristic Fallback)
-        self._lazy_init_ocr()
-        if self._easyocr_initialized and self.reader:
+        # 2. Extract Text using OCR (Tesseract -> EasyOCR -> Gemini Fallback)
+        if not ocr_text.strip():
             try:
-                results = self.reader.readtext(image_path)
-                ocr_text = " ".join([item[1] for item in results])
+                import pytesseract
+                # Configure tesseract cmd from env if set
+                tess_cmd = os.getenv("TESSERACT_CMD")
+                if tess_cmd and os.path.exists(tess_cmd):
+                    pytesseract.pytesseract.tesseract_cmd = tess_cmd
+                ocr_text = pytesseract.image_to_string(Image.open(image_path))
+                if ocr_text.strip():
+                    logger.info("Tesseract OCR successfully extracted text from image.")
             except Exception as e:
-                logger.error(f"EasyOCR detection failed: {e}")
+                logger.warning(f"Tesseract OCR failed or not installed: {e}")
+
+        if not ocr_text.strip():
+            self._lazy_init_ocr()
+            if self._easyocr_initialized and self.reader:
+                try:
+                    results = self.reader.readtext(image_path)
+                    ocr_text = " ".join([item[1] for item in results])
+                except Exception as e:
+                    logger.error(f"EasyOCR detection failed: {e}")
         
         # If OCR failed or returned empty, fall back to Gemini multimodal analysis
         if not ocr_text.strip() and gemini_service.enabled:
-            logger.info("EasyOCR returned empty. Using Gemini multimodal image analysis.")
+            logger.info("Local OCR returned empty. Using Gemini multimodal image analysis.")
             gemini_result = gemini_service.analyze_image(image_path)
             if gemini_result:
                 ocr_text = gemini_result.get("ocr_text", "")

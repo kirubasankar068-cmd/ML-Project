@@ -630,7 +630,7 @@ export const BulkPredictor: React.FC = () => {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-              <span>Smart Bug Bulk Predictor Dashboard</span>
+              <span>Smart Bug Analyzer Dashboard</span>
               {fileId && <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full border border-blue-100 font-bold">File Batch: {fileId}</span>}
             </h1>
             <p className="text-[11px] text-slate-500 font-semibold mt-1">

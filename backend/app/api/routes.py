@@ -80,7 +80,7 @@ async def get_model_info(current_user: dict = Depends(get_current_user)) -> Mode
     feature_names = fe.get_feature_names() if fe else []
     
     return ModelInfoResponse(
-        app_name="Smart Bug Priority Predictor",
+        app_name="Smart Bug Analyzer",
         version="1.0.0",
         model_type=model_type,
         feature_names=feature_names

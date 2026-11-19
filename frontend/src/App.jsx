@@ -8,6 +8,7 @@ import BulkPredictor from './pages/BulkPredictor';
 import Analytics from './pages/Analytics';
 import Monitoring from './pages/Monitoring';
 import SettingsPage from './pages/Settings';
+import SolutionDashboard from './pages/SolutionDashboard';
 import Login from './pages/Login';
 
 // Create a client
@@ -52,6 +53,7 @@ function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/prediction" element={<Predictor />} />
             <Route path="/bulk-predict" element={<BulkPredictor />} />
+            <Route path="/solution-dashboard" element={<SolutionDashboard />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/monitoring" element={<Monitoring />} />
             <Route path="/settings" element={<SettingsPage />} />

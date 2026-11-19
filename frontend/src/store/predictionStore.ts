@@ -27,13 +27,9 @@ const loadStoredPredictions = (): (PredictionResult & { input: BugInput })[] => 
     const data = localStorage.getItem('smart_bug_predictions');
     const parsed = data ? JSON.parse(data) : [];
     return parsed.map((p: any) => {
-      const conf = p.confidence_score ?? p.prediction?.confidence ?? 0.8;
-      const pct = conf * 100;
-      let priority = p.priority_label ?? p.prediction?.priority ?? 'Medium';
-      if (pct >= 90) priority = 'Critical';
-      else if (pct >= 80) priority = 'High';
-      else if (pct >= 70) priority = 'Medium';
-      else priority = 'Low';
+      const conf = p.confidence_score ?? p.prediction?.confidence ?? p.confidence ?? 0.85;
+      const rawPrio = p.priority_label ?? p.priority ?? p.prediction?.priority ?? 'Medium';
+      const priority = String(rawPrio).charAt(0).toUpperCase() + String(rawPrio).slice(1);
 
       const updated = {
         ...p,

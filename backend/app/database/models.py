@@ -28,6 +28,15 @@ class Prediction(Base):
     # Prediction details
     predicted_priority = Column(String, nullable=False)
     confidence = Column(Float, nullable=False)
+    model_version = Column(String, default="SBP-v1.0")
+    input_data_json = Column(Text, nullable=True)
+    
+    # Verification & Continuous Learning
+    actual_priority = Column(String, nullable=True)
+    verified_by = Column(String, nullable=True)
+    verified_at = Column(DateTime, nullable=True)
+    is_verified = Column(Boolean, default=False)
+    used_in_retraining = Column(Boolean, default=False)
     
     # Multi-model metrics
     local_model_priority = Column(String, nullable=True)
@@ -47,7 +56,6 @@ class Prediction(Base):
     prevention_json = Column(Text, nullable=True)
     
     timestamp = Column(DateTime, default=datetime.datetime.utcnow)
-
 
 
 class UploadedFile(Base):
@@ -76,6 +84,23 @@ class ModelMetric(Base):
     active = Column(Boolean, default=True)
 
 
+class ModelVersion(Base):
+    __tablename__ = "model_versions"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    model_version = Column(String, unique=True, index=True, nullable=False) # e.g., SBP-v1.0
+    dataset_version = Column(String, default="DS-v1.0")
+    training_date = Column(DateTime, default=datetime.datetime.utcnow)
+    accuracy = Column(Float, nullable=False, default=0.0)
+    precision = Column(Float, nullable=False, default=0.0)
+    recall = Column(Float, nullable=False, default=0.0)
+    f1_score = Column(Float, nullable=False, default=0.0)
+    macro_f1 = Column(Float, nullable=False, default=0.0)
+    model_status = Column(String, default="active") # active, archived, rejected
+    model_file = Column(String, nullable=False)
+    verified_samples_count = Column(Integer, default=0)
+
+
 class PredictionHistory(Base):
     __tablename__ = "prediction_history"
     
@@ -98,3 +123,21 @@ class AuditLog(Base):
     timestamp = Column(DateTime, default=datetime.datetime.utcnow)
     
     user = relationship("User", back_populates="audit_logs")
+
+
+class ModelTrainingStats(Base):
+    __tablename__ = "model_training_stats"
+
+    id = Column(Integer, primary_key=True, index=True)
+    model_version = Column(String, default="SBP-v1.0")
+    current_accuracy = Column(Float, default=92.5)
+    accuracy_change = Column(Float, default=2.3) # change since last training e.g. +2.3%
+    new_verified_samples = Column(Integer, default=0)
+    samples_needed_for_retrain = Column(Integer, default=100)
+    total_samples_used = Column(Integer, default=1500)
+    last_trained_at = Column(DateTime, default=datetime.datetime.utcnow)
+    status = Column(String, default="Idle") # Idle, Collecting data, Training, Completed, Failed
+    auto_train_enabled = Column(Boolean, default=True)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+

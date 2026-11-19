@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { Sliders, Key, Bell, Cpu, Link2, Check, AlertCircle, RefreshCw } from 'lucide-react';
 import { cn } from '../lib/utils';
 
+import { ModelTrainingCard } from '../components/ModelTrainingCard';
+
 export const SettingsPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'general' | 'api' | 'notifications' | 'model' | 'integrations'>('general');
-  const [orgName, setOrgName] = useState('Smart Bug Predictor Org');
+  const [activeTab, setActiveTab] = useState<'general' | 'api' | 'notifications' | 'model' | 'training' | 'integrations'>('general');
+  const [orgName, setOrgName] = useState('Smart Bug Analyzer Org');
   const [refreshInterval, setRefreshInterval] = useState('30s');
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const [apiUrl, setApiUrl] = useState('http://localhost:8000');
@@ -36,8 +38,10 @@ export const SettingsPage: React.FC = () => {
     { id: 'api', name: 'API Configuration', icon: Key },
     { id: 'notifications', name: 'Notifications', icon: Bell },
     { id: 'model', name: 'Model Parameter', icon: Cpu },
+    { id: 'training', name: 'Model Training', icon: RefreshCw },
     { id: 'integrations', name: 'Integrations', icon: Link2 },
   ];
+
 
   return (
     <div className="bg-white rounded-[2rem] shadow-xl overflow-hidden flex flex-col md:flex-row min-h-[520px] border border-transparent">
@@ -215,7 +219,13 @@ export const SettingsPage: React.FC = () => {
           </div>
         )}
 
+        {/* Tab: Model Training */}
+        {activeTab === 'training' && (
+          <ModelTrainingCard />
+        )}
+
         {/* Tab 5: integrations */}
+
         {activeTab === 'integrations' && (
           <div className="space-y-6">
             <div>

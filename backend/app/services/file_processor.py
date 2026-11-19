@@ -33,6 +33,10 @@ class FileProcessor:
             bugs = self._parse_json(file_path)
         elif ext in [".log", ".txt"]:
             bugs = self._parse_log_or_txt(file_path, filename)
+        elif ext == ".pdf":
+            bugs = self._parse_pdf(file_path, filename)
+        elif ext == ".docx":
+            bugs = self._parse_docx(file_path, filename)
         else:
             raise ValueError(f"Unsupported file format: {ext}")
             
@@ -240,5 +244,82 @@ class FileProcessor:
 
         logger.debug(f"Sanitized bug #{index + 1}: title='{cleaned['title'][:40]}' severity={cleaned['severity']}")
         return cleaned
+
+    def _parse_pdf(self, file_path: str, filename: str) -> List[Dict[str, Any]]:
+        """Parses text from PDF document using pypdf / pdfplumber fallback"""
+        text = self._extract_pdf_text(file_path)
+        return [{
+            "title": f"PDF Bug Report: {filename}",
+            "description": text[:5000] if text else "Empty PDF file or unreadable scanned PDF",
+            "severity": "medium",
+            "component": "PDF Document"
+        }]
+
+    def _parse_docx(self, file_path: str, filename: str) -> List[Dict[str, Any]]:
+        """Parses text from Word DOCX file using python-docx"""
+        text = self._extract_docx_text(file_path)
+        return [{
+            "title": f"DOCX Bug Report: {filename}",
+            "description": text[:5000] if text else "Empty DOCX file",
+            "severity": "medium",
+            "component": "Word Document"
+        }]
+
+    def extract_raw_text(self, file_path: str, filename: str) -> str:
+        """Extracts raw text content from any supported document format"""
+        ext = os.path.splitext(filename)[1].lower()
+        if ext == ".pdf":
+            return self._extract_pdf_text(file_path)
+        elif ext == ".docx":
+            return self._extract_docx_text(file_path)
+        elif ext in [".log", ".txt", ".json", ".csv"]:
+            try:
+                with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                    return f.read()
+            except Exception as e:
+                logger.error(f"Failed to read text file {filename}: {e}")
+                return ""
+        else:
+            try:
+                with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                    return f.read()
+            except Exception:
+                return ""
+
+    def _extract_pdf_text(self, file_path: str) -> str:
+        """Extracts text from PDF file"""
+        try:
+            import pypdf
+            reader = pypdf.PdfReader(file_path)
+            extracted = []
+            for page in reader.pages:
+                t = page.extract_text()
+                if t:
+                    extracted.append(t)
+            return "\n".join(extracted)
+        except Exception as e:
+            logger.warning(f"pypdf extraction failed for {file_path}: {e}")
+            try:
+                import PyPDF2
+                reader = PyPDF2.PdfReader(file_path)
+                extracted = [page.extract_text() for page in reader.pages if page.extract_text()]
+                return "\n".join(extracted)
+            except Exception as ex:
+                logger.error(f"PyPDF2 extraction failed: {ex}")
+                return ""
+
+    def _extract_docx_text(self, file_path: str) -> str:
+        """Extracts text from Word DOCX file"""
+        try:
+            import docx
+            doc = docx.Document(file_path)
+            paragraphs = [p.text for p in doc.paragraphs if p.text]
+            return "\n".join(paragraphs)
+        except Exception as e:
+            logger.error(f"python-docx extraction failed for {file_path}: {e}")
+            return ""
+
+file_processor = FileProcessor()
+
 
 file_processor = FileProcessor()
